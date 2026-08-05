@@ -23,7 +23,7 @@ export function LoginForm({ configured }: { configured: boolean }) {
       password: String(data.get("password")),
     });
     if (signInError) {
-      setError(signInError.message);
+      setError("Invalid email or password.");
       setPending(false);
       return;
     }
@@ -31,29 +31,8 @@ export function LoginForm({ configured }: { configured: boolean }) {
     router.refresh();
   }
 
-  async function handleGoogleLogin() {
-    if (!configured) return;
-    setPending(true);
-    setError("");
-    const supabase = createClient();
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      // Use the origin serving this browser so production OAuth can never
-      // inherit a localhost URL that was present during the Next.js build.
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
-    if (oauthError) {
-      setError(oauthError.message);
-      setPending(false);
-    }
-  }
-
   return (
     <form className="login-form" onSubmit={handlePasswordLogin}>
-      <button className="google-button" type="button" onClick={handleGoogleLogin} disabled={!configured || pending}>
-        <span className="google-g">G</span> Continue with Google
-      </button>
-      <div className="form-divider"><span>or use email</span></div>
       <label>
         Email
         <input name="email" type="email" autoComplete="email" placeholder="you@example.com" required disabled={!configured} />

@@ -41,7 +41,7 @@ export default async function LoginPage() {
           <div className="auth-form-heading">
             <span>WELCOME BACK</span>
             <h2>Sign in to InternBid</h2>
-            <p>Use your approved university account to continue.</p>
+            <p>Use your email and password to continue.</p>
           </div>
           {!isSupabaseConfigured() && (
             <div className="setup-notice">

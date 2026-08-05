@@ -6,7 +6,7 @@ InternBid is a mobile-friendly internship company bidding and CV allocation syst
 
 ## Included
 
-- Supabase email/password and Google OAuth authentication with SSR cookies.
+- Supabase email/password authentication with SSR cookies.
 - Student, administrator, and read-only committee roles.
 - Responsive student portal with point balances, Stay or Withdraw bid responses, participant names, private notifications, and a point ledger.
 - Administrator control room with live applicant demand, current-bid increases, response monitoring, finalization, company setup, student point adjustments, analytics, CSV exports, and an audit log.
@@ -20,13 +20,16 @@ InternBid is a mobile-friendly internship company bidding and CV allocation syst
 
 1. Create a project in Supabase.
 2. Open the SQL editor and run the files in `supabase/migrations` in filename order, or link the Supabase CLI and run `supabase db push`. Existing installations must apply every migration newer than the latest entry in their migration history, including `202608050003_admin_controlled_bidding.sql` for committee-controlled bid increases.
-3. In **Authentication → URL Configuration**, add:
+3. If Google sign-in is enabled, open **Authentication → URL Configuration** and add:
    - `http://localhost:3000/auth/callback`
    - `https://your-production-domain/auth/callback`
    Set **Site URL** to `https://your-production-domain` in production. The
    production callback must appear exactly in **Redirect URLs**, otherwise
-   Supabase falls back to the Site URL.
-4. Enable Google in **Authentication → Providers** if university Google login is required.
+   Supabase falls back to the Site URL. Password registration does not use this
+   callback.
+4. In **Authentication → Providers → Email**, turn off **Confirm email** so
+   password registration creates an active session immediately and sends no
+   signup-verification message.
 5. For production private Broadcast channels, disable public channel access in **Realtime → Settings**.
 
 New Auth users automatically receive a student profile with 100 points. To make the first administrator, run this once after that person signs in:
@@ -51,7 +54,12 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
 The sign-up page accepts any syntactically valid email and collects the student’s name, index, and password confirmation. Supabase Auth securely manages the password; the public profile stores no password or password hash.
 
-In the hosted Supabase project, open **Authentication → Providers → Email** and disable **Confirm email**. This accepts the supplied address without sending a verification message and lets the student sign in immediately. Local Supabase uses the matching `auth.email.enable_confirmations = false` setting in `supabase/config.toml`.
+Local Supabase already uses immediate password registration through
+`auth.email.enable_confirmations = false` in `supabase/config.toml`.
+
+Migration `202608050004_confirm_existing_email_users.sql` confirms accounts
+that were created before confirmation was disabled. Apply it with the other
+migrations or run its `UPDATE` statement once in the Supabase SQL Editor.
 
 For Cloudflare-local development, also copy `.dev.vars.example` to `.dev.vars`. Keep secrets in `.dev.vars`; it is intentionally gitignored.
 

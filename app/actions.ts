@@ -28,7 +28,7 @@ export async function registerStudent(
 
     const value = parsed.data;
     const supabase = await createClient();
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: value.email,
       password: value.password,
       options: {
@@ -47,6 +47,16 @@ export async function registerStudent(
         };
       }
       throw new Error(error.message);
+    }
+
+    // InternBid has no email-verification flow. A successful registration must
+    // create a usable session immediately; never send students into an email
+    // confirmation dead end when a hosted Auth project is misconfigured.
+    if (!data.session) {
+      return {
+        ok: false,
+        message: "Account creation is temporarily unavailable. Please contact an administrator.",
+      };
     }
 
     return {

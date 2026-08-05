@@ -226,12 +226,6 @@ button { color: inherit; }
 .login-form { display: grid; gap: 17px; }
 .signup-form { gap: 14px; }
 .signup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.google-button { height: 48px; border: 1px solid var(--line); border-radius: 10px; background: white; cursor: pointer; font-size: 13px; font-weight: 700; }
-.google-button:hover { background: var(--surface-soft); }
-.google-g { display: inline-grid; place-items: center; margin-right: 8px; width: 20px; height: 20px; font-weight: 900; color: #4285f4; }
-.form-divider { display: flex; align-items: center; color: #9aa29d; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; }
-.form-divider::before, .form-divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
-.form-divider span { padding: 0 12px; }
 .login-form label, .field-label, .company-form label { display: grid; gap: 7px; font-size: 11px; font-weight: 730; color: var(--ink-soft); }
 .login-form input, .field-label input, .field-label textarea, .company-form input, .company-form textarea { width: 100%; border: 1px solid #d6dcd7; border-radius: 9px; padding: 12px 13px; color: var(--ink); background: white; font-size: 13px; transition: border .2s, box-shadow .2s; }
 .login-form input { height: 47px; }
