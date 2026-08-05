@@ -1,4 +1,5 @@
 export type UserRole = "student" | "admin" | "viewer";
+export type BiddingMode = "committee" | "automatic";
 
 export type CompanyStatus =
   | "upcoming"
@@ -50,6 +51,10 @@ export interface Company {
   bid_increment: number;
   maximum_bid: number | null;
   withdrawal_penalty_percent: number;
+  bidding_mode: BiddingMode;
+  inactivity_timeout_seconds: number;
+  last_bid_at: string | null;
+  auto_closes_at: string | null;
   opens_at: string | null;
   closes_at: string | null;
   response_duration_minutes: number;
@@ -66,7 +71,17 @@ export interface Company {
 
 export interface BidParticipant {
   full_name: string;
-  response_state: "staying" | "pending" | "selected" | "finalized";
+  response_state:
+    | "staying"
+    | "pending"
+    | "selected"
+    | "finalized"
+    | "not_selected"
+    | "withdrawn";
+  bid_amount: number;
+  rank_position: number | null;
+  is_currently_selected: boolean;
+  is_self?: boolean;
 }
 
 export interface PublicCompanyAnalytics {
@@ -81,6 +96,9 @@ export interface PublicCompanyAnalytics {
   closes_at: string | null;
   status: CompanyStatus;
   applicant_count: number;
+  bidding_mode: BiddingMode;
+  inactivity_timeout_seconds: number;
+  auto_closes_at: string | null;
   participants: BidParticipant[];
   demand_ratio: number;
 }

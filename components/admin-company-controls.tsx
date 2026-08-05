@@ -15,6 +15,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   changeCompanyStatus,
+  finalizeAutomaticBidding,
   finalizeCompany,
   increaseCompanyBid,
 } from "@/app/actions";
@@ -28,7 +29,7 @@ export function AdminCompanyControls({
   compact?: boolean;
 }) {
   const router = useRouter();
-  const [dialog, setDialog] = useState<"increase" | "finalize" | "cancel" | null>(null);
+  const [dialog, setDialog] = useState<"increase" | "finalize" | "autoFinalize" | "cancel" | null>(null);
   const [incrementAmount, setIncrementAmount] = useState(company.bid_increment);
   const [feedback, setFeedback] = useState<ActionState | null>(null);
   const [pending, startTransition] = useTransition();
@@ -67,6 +68,7 @@ export function AdminCompanyControls({
   }
 
   const canIncrease = company.status === "open" &&
+    company.bidding_mode === "committee" &&
     company.applicant_count > company.cv_requirement &&
     company.pending_count === 0 &&
     (company.maximum_bid === null || company.current_bid < company.maximum_bid);
@@ -134,6 +136,22 @@ export function AdminCompanyControls({
           </>
         )}
 
+        {dialog === "autoFinalize" && (
+          <>
+            <span className="modal-kicker">CLOSE AUTOMATIC AUCTION</span>
+            <h2>Close {company.name} now?</h2>
+            <p>The top {company.cv_requirement} bids will be selected by bid amount. Equal bids favor the earlier submission. Winners spend their individual bid and all other reservations are released.</p>
+            <div className="point-preview">
+              <div><span>Applicants</span><strong>{company.applicant_count}</strong></div>
+              <div><span>Available slots</span><strong>{company.cv_requirement}</strong></div>
+              <div className="point-preview-total"><span>Highest bid</span><strong>{company.current_bid} pts</strong></div>
+            </div>
+            <button className="button button-dark modal-primary" onClick={() => run(() => finalizeAutomaticBidding(company.id))} disabled={pending}>
+              {pending ? <LoaderCircle className="spin" /> : "Close & select top bids"}
+            </button>
+          </>
+        )}
+
         {dialog === "cancel" && (
           <>
             <span className="modal-kicker">CANCEL SESSION</span>
@@ -151,6 +169,21 @@ export function AdminCompanyControls({
   );
 
   if (compact) {
+    if (company.bidding_mode === "automatic") {
+      return (
+        <>
+          <div className="compact-controls">
+            {company.status === "upcoming" && <button disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "open"))}><CirclePlay /> Open</button>}
+            {company.status === "open" && <button disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "paused"))}><CirclePause /> Pause</button>}
+            {company.status === "paused" && <button disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "open"))}><CirclePlay /> Resume</button>}
+            {["open", "paused"].includes(company.status) && <button disabled={pending} onClick={() => setDialog("autoFinalize")}><LockKeyhole /> Close now</button>}
+            <Link href={`/admin/companies/${company.id}/edit`} aria-label={`Edit ${company.name}`}><Pencil /> Edit</Link>
+          </div>
+          {feedback && !dialog && <p className={feedback.ok ? "inline-success" : "inline-error"}>{feedback.message}</p>}
+          {dialogs}
+        </>
+      );
+    }
     return (
       <>
         <div className="compact-controls">
@@ -171,22 +204,34 @@ export function AdminCompanyControls({
   return (
     <>
       <div className="admin-control-row">
-        {company.status === "upcoming" && <button className="button button-primary" disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "open"))}><CirclePlay size={17} /> Open bidding</button>}
-        {company.status === "open" && (
+        {company.status === "upcoming" && <button className="button button-primary" disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "open"))}><CirclePlay size={17} /> Open {company.bidding_mode === "automatic" ? "automatic auction" : "bidding"}</button>}
+        {company.bidding_mode === "automatic" && company.status === "open" && (
+          <>
+            <button className="button button-ghost" disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "paused"))}><CirclePause size={17} /> Pause timer</button>
+            <button className="button button-dark" disabled={pending} onClick={() => setDialog("autoFinalize")}><LockKeyhole size={17} /> Close & select now</button>
+          </>
+        )}
+        {company.bidding_mode === "automatic" && company.status === "paused" && (
+          <>
+            <button className="button button-primary" disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "open"))}><CirclePlay size={17} /> Resume timer</button>
+            <button className="button button-dark" disabled={pending} onClick={() => setDialog("autoFinalize")}><LockKeyhole size={17} /> Close & select now</button>
+          </>
+        )}
+        {company.bidding_mode === "committee" && company.status === "open" && (
           <>
             <button className="button button-ghost" disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "paused"))}><CirclePause size={17} /> Pause</button>
             <button className="button button-warning" disabled={pending || !canIncrease} onClick={openIncreaseDialog}><Gavel size={17} /> Increase bid</button>
             <button className="button button-ghost" disabled={pending || company.pending_count > 0 || company.applicant_count > company.cv_requirement} onClick={() => run(() => changeCompanyStatus(company.id, "closed"))}><LockKeyhole size={17} /> Close</button>
           </>
         )}
-        {company.status === "paused" && (
+        {company.bidding_mode === "committee" && company.status === "paused" && (
           <>
             <button className="button button-primary" disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "open"))}><CirclePlay size={17} /> Resume</button>
             <button className="button button-ghost" disabled={pending || company.pending_count > 0 || company.applicant_count > company.cv_requirement} onClick={() => run(() => changeCompanyStatus(company.id, "closed"))}><LockKeyhole size={17} /> Close</button>
           </>
         )}
-        {company.status === "bid_increase_pending" && <span className="control-progress"><LoaderCircle className="spin" size={16} /> Waiting for {company.pending_count} student responses</span>}
-        {company.status === "closed" && <button className="button button-dark" disabled={pending || company.pending_count > 0 || company.applicant_count > company.cv_requirement} onClick={() => setDialog("finalize")}><LockKeyhole size={17} /> Finalize</button>}
+        {company.bidding_mode === "committee" && company.status === "bid_increase_pending" && <span className="control-progress"><LoaderCircle className="spin" size={16} /> Waiting for {company.pending_count} student responses</span>}
+        {company.bidding_mode === "committee" && company.status === "closed" && <button className="button button-dark" disabled={pending || company.pending_count > 0 || company.applicant_count > company.cv_requirement} onClick={() => setDialog("finalize")}><LockKeyhole size={17} /> Finalize</button>}
         {!["finalized", "cancelled"].includes(company.status) && <button className="button button-danger-ghost" disabled={pending} onClick={() => setDialog("cancel")}><XCircle size={17} /> Cancel</button>}
       </div>
       {pending && <p className="control-progress"><LoaderCircle className="spin" size={16} /> Processing secure transaction…</p>}

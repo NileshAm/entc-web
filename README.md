@@ -8,8 +8,8 @@ InternBid is a mobile-friendly internship company bidding and CV allocation syst
 
 - Supabase email/password authentication with SSR cookies.
 - Student, administrator, and read-only committee roles.
-- Responsive student portal with point balances, Stay or Withdraw bid responses, participant names, private notifications, and a point ledger.
-- Administrator control room with live applicant demand, current-bid increases, response monitoring, finalization, company setup, student point adjustments, analytics, CSV exports, and an audit log.
+- Responsive student portal with point balances, committee-round Stay or Withdraw responses, student-set automatic bids, live rankings, participant names, private notifications, and a point ledger.
+- Administrator control room where the committee chooses a bidding method per company, controls committee bid increases, monitors automatic auctions, closes/finalizes sessions, manages companies and student points, exports data, and reviews the audit log.
 - Admin-only company editing with audited changes to catalogue details, bid rules, and schedules.
 - A public `/analytics` page with realtime current bids, aggregate demand, and current applicant names with their bidding status. Emails, student indexes, points, and administrative data remain private.
 - PostgreSQL row-level security and locked, transactional RPCs for every point-changing bidding action.
@@ -19,7 +19,7 @@ InternBid is a mobile-friendly internship company bidding and CV allocation syst
 ## 1. Create the Supabase project
 
 1. Create a project in Supabase.
-2. Open the SQL editor and run the files in `supabase/migrations` in filename order, or link the Supabase CLI and run `supabase db push`. Existing installations must apply every migration newer than the latest entry in their migration history, including `202608050003_admin_controlled_bidding.sql` for committee-controlled bid increases and `202608060001_public_bid_participants.sql` for applicant lists and statuses.
+2. Open the SQL editor and run the files in `supabase/migrations` in filename order, or link the Supabase CLI and run `supabase db push`. Existing installations must apply every migration newer than the latest entry in their migration history, including `202608050003_admin_controlled_bidding.sql`, `202608060001_public_bid_participants.sql`, `202608060002_dual_mode_automatic_bidding.sql`, and `202608060003_committee_response_timeouts.sql`.
 3. If Google sign-in is enabled, open **Authentication → URL Configuration** and add:
    - `http://localhost:3000/auth/callback`
    - `https://your-production-domain/auth/callback`
@@ -87,7 +87,11 @@ npm test
 npm run build
 ```
 
-## 4. Administrator-controlled bidding rules
+## 4. Per-company bidding methods
+
+The committee selects the method while a company is still **Upcoming**. It is locked once bidding starts so an in-progress session cannot switch rule sets.
+
+### Committee-controlled bidding
 
 - Students apply at the company’s current bid and reserve that amount.
 - When a company is oversubscribed, an administrator enters the increment for that round on the fly. The configured increment only prefills the control, and the new current bid is previewed immediately.
@@ -97,15 +101,20 @@ npm run build
 - A normal withdrawal when no increase response is pending releases the reservation without this charge.
 - Authenticated students can see the names and response states of students currently in the session, plus applicant and available-slot counts. Emails, registration numbers, point balances, and administrator data are not exposed.
 
-To automatically withdraw students who miss the response deadline, enable `pg_cron` and schedule:
+The Stay/Withdraw deadline is configurable per company. Migration `202608060003_committee_response_timeouts.sql` schedules a 10-second `pg_cron` sweep that force-withdraws overdue responses through the same atomic penalty routine. If Cron is unavailable locally, schedule this function externally:
 
 ```sql
-select cron.schedule(
-  'expire-bid-responses',
-  '* * * * *',
-  'select public.expire_bid_responses()'
-);
+select public.process_expired_bid_responses();
 ```
+
+### Automatic ranked bidding
+
+- Students enter their own whole-number bid and may only increase it while the auction is open. The bid cannot exceed their usable points or the company maximum.
+- Each bid reserves the additional points atomically and restarts the company inactivity timer.
+- When the timer expires, the top bids up to the CV-slot target are selected. Equal bids favor the earlier submission. Winners spend their individual bid; all other reservations are released.
+- A student who withdraws pays their first bid plus `ceil((latest bid − first bid) × withdrawal percentage)`, capped at their usable balance.
+- The inactivity window is configured per company from 30 seconds to 24 hours and defaults to 120 seconds. Administrators can pause, resume, or close an auction immediately.
+- The migration installs a `pg_cron` sweep every 10 seconds when the extension is available. On hosted Supabase, ensure the Cron integration/extension is enabled; the close function is `public.close_inactive_automatic_bidding()`.
 
 ## 5. Deploy to Cloudflare Workers
 
@@ -174,8 +183,8 @@ The unresolved committee decisions from the SRS use these conservative defaults:
 
 - One company can be live at a time.
 - Multiple applications are permitted only when the student has enough unreserved points.
-- Points are spent at the committee-controlled current bid for every finalized applicant.
-- Normal withdrawal releases reserved points; withdrawing from a bid increase applies the configured charge.
+- Committee-mode points are spent at the committee-controlled current bid; automatic-mode winners spend their individual bids.
+- Normal committee withdrawal releases reserved points; committee increase withdrawals and automatic-mode withdrawals apply their configured charge.
 - Missed bid responses automatically use the same withdrawal-charge workflow when the expiry function is scheduled.
 - Students see participant names and response states, but not emails, indexes, balances, or other private profile data.
 - Notifications are portal-only.

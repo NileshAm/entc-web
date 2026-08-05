@@ -1,4 +1,4 @@
-import type { BidParticipant, CompanyStatus } from "@/lib/types";
+import type { BidParticipant, BiddingMode, CompanyStatus } from "@/lib/types";
 
 export function availablePoints(profile: {
   initial_points: number;
@@ -41,8 +41,38 @@ export function participantStatusLabel(status: BidParticipant["response_state"])
     pending: "Response pending",
     selected: "Selected",
     finalized: "Finalized",
+    not_selected: "Not selected",
+    withdrawn: "Withdrawn",
   };
   return labels[status];
+}
+
+export function participantRankingLabel(
+  participant: BidParticipant,
+  biddingMode: BiddingMode,
+  cvRequirement: number,
+) {
+  const rank = participant.rank_position === null
+    ? ""
+    : `#${participant.rank_position} · `;
+  const bid = `${participant.bid_amount} pts`;
+
+  if (["withdrawn", "not_selected", "selected", "finalized"].includes(
+    participant.response_state,
+  )) {
+    return `${rank}${bid} · ${participantStatusLabel(participant.response_state)}`;
+  }
+
+  if (biddingMode === "automatic") {
+    return `${rank}${bid} · ${participant.is_currently_selected ? "Top slots" : "Outside cutoff"}`;
+  }
+
+  const standing = participant.is_currently_selected
+    ? participantStatusLabel(participant.response_state)
+    : participant.rank_position === cvRequirement + 1
+      ? "Next to be removed"
+      : "Outside cutoff";
+  return `${rank}${bid} reserved · ${standing}`;
 }
 
 export function formatDateTime(value: string | null) {

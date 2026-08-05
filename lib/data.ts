@@ -23,6 +23,11 @@ function normalizeCompany(row: Record<string, unknown>): Company {
     pending_count: Number(row.pending_count ?? 0),
     withdrawal_count: Number(row.withdrawal_count ?? 0),
     withdrawal_penalty_percent: Number(row.withdrawal_penalty_percent ?? 10),
+    response_duration_minutes: Number(row.response_duration_minutes ?? 10),
+    bidding_mode: row.bidding_mode === "automatic" ? "automatic" : "committee",
+    inactivity_timeout_seconds: Number(row.inactivity_timeout_seconds ?? 120),
+    last_bid_at: (row.last_bid_at as string | null | undefined) ?? null,
+    auto_closes_at: (row.auto_closes_at as string | null | undefined) ?? null,
     demand_ratio: cvRequirement > 0 ? applicantCount / cvRequirement : 0,
   };
 }
@@ -149,7 +154,7 @@ export async function getCompanyForAdminEdit(companyId: string) {
   const { data, error } = await supabase
     .from("companies")
     .select(
-      "id,name,slug,description,industry,location,available_roles,required_skills,cv_requirement,minimum_bid,current_bid,bid_increment,maximum_bid,withdrawal_penalty_percent,opens_at,closes_at,status,applicant_count,confirmed_count,pending_count,withdrawal_count",
+      "id,name,slug,description,industry,location,available_roles,required_skills,cv_requirement,minimum_bid,current_bid,bid_increment,maximum_bid,withdrawal_penalty_percent,response_duration_minutes,bidding_mode,inactivity_timeout_seconds,last_bid_at,auto_closes_at,opens_at,closes_at,status,applicant_count,confirmed_count,pending_count,withdrawal_count",
     )
     .eq("id", companyId)
     .maybeSingle();

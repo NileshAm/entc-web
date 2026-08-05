@@ -4,6 +4,7 @@ import {
   demandCategory,
   formatStatus,
   initials,
+  participantRankingLabel,
   participantStatusLabel,
 } from "../lib/business";
 
@@ -59,7 +60,36 @@ describe("display helpers", () => {
     ["pending", "Response pending"],
     ["selected", "Selected"],
     ["finalized", "Finalized"],
+    ["not_selected", "Not selected"],
+    ["withdrawn", "Withdrawn"],
   ] as const)("formats participant status %s", (status, expected) => {
     expect(participantStatusLabel(status)).toBe(expected);
+  });
+
+  it("keeps withdrawn students visible without a rank", () => {
+    expect(participantRankingLabel({
+      full_name: "Nimal Perera",
+      response_state: "withdrawn",
+      bid_amount: 45,
+      rank_position: null,
+      is_currently_selected: false,
+    }, "automatic", 2)).toBe("45 pts · Withdrawn");
+  });
+
+  it("labels finalized selected and non-selected ranking outcomes", () => {
+    expect(participantRankingLabel({
+      full_name: "Nimal Perera",
+      response_state: "selected",
+      bid_amount: 45,
+      rank_position: 1,
+      is_currently_selected: true,
+    }, "automatic", 1)).toBe("#1 · 45 pts · Selected");
+    expect(participantRankingLabel({
+      full_name: "Amara Silva",
+      response_state: "not_selected",
+      bid_amount: 40,
+      rank_position: 2,
+      is_currently_selected: false,
+    }, "automatic", 1)).toBe("#2 · 40 pts · Not selected");
   });
 });

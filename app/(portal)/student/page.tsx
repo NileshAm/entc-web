@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Bell, Bookmark, Coins, Gavel, History, TrendingUp, WalletCards } from "lucide-react";
+import { AlertTriangle, ArrowRight, Bell, Bookmark, Coins, Gavel, History, TrendingUp, WalletCards } from "lucide-react";
 import { markNotificationRead } from "@/app/actions";
 import { CompanyCard } from "@/components/company-card";
 import { StatusBadge } from "@/components/status-badge";
@@ -7,7 +7,13 @@ import { availablePoints, formatDateTime } from "@/lib/business";
 import { requireProfile } from "@/lib/auth";
 import { getStudentData } from "@/lib/data";
 
-export default async function StudentPage() {
+export default async function StudentPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ forcedWithdrawal?: string | string[] }>;
+}) {
+  const query = await searchParams;
+  const showForcedWithdrawal = query.forcedWithdrawal === "1";
   const current = await requireProfile(["student"]);
   const { profile, companies, applications, notifications } = await getStudentData(current.id);
   const available = availablePoints(profile);
@@ -17,6 +23,12 @@ export default async function StudentPage() {
 
   return (
     <div className="dashboard-page">
+      {showForcedWithdrawal && (
+        <div className="forced-withdrawal-notice" role="alert">
+          <AlertTriangle />
+          <span><strong>Force withdrawal completed</strong>Your response timer expired. You were withdrawn from the company and the normal withdrawal charge was deducted from your points.</span>
+        </div>
+      )}
       <div className="page-title-row">
         <div><span className="page-kicker">STUDENT OVERVIEW</span><h1>Good {new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening"}, {profile.full_name.split(" ")[0]}.</h1><p>Here’s what’s happening with your internship bidding.</p></div>
         <Link className="button button-dark" href="/student/companies">Explore companies <ArrowRight size={17} /></Link>

@@ -97,12 +97,24 @@ export async function applyToCompany(companyId: string) {
   );
 }
 
+export async function submitAutomaticBid(companyId: string, bid: number) {
+  if (!Number.isInteger(bid) || bid < 0) {
+    return { ok: false, message: "Enter a valid whole-number bid." };
+  }
+  return rpcAction(
+    "student",
+    "submit_automatic_bid",
+    { p_company_id: companyId, p_bid: bid },
+    "Bid submitted. The inactivity timer has restarted.",
+  );
+}
+
 export async function withdrawApplication(applicationId: string) {
   return rpcAction(
     "student",
     "withdraw_application",
     { p_application_id: applicationId },
-    "Application withdrawn and reserved points released.",
+    "Application withdrawn. Reserved points were released and any applicable withdrawal charge was applied.",
   );
 }
 
@@ -115,6 +127,28 @@ export async function respondToBid(applicationId: string, stay: boolean) {
       ? "You are staying in the session at the new bid."
       : "You withdrew from the session and the withdrawal charge was applied.",
   );
+}
+
+export async function forceWithdrawExpiredResponse(applicationId: string) {
+  try {
+    await requireProfile(["student"]);
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("force_withdraw_expired_bid_response", {
+      p_application_id: applicationId,
+    });
+    if (error) throw new Error(error.message);
+    if (!data) {
+      return { ok: false, message: "This bid response is no longer awaiting timeout processing." };
+    }
+    revalidatePath("/student", "layout");
+    revalidatePath("/analytics");
+    return {
+      ok: true,
+      message: "The response deadline expired. You were force-withdrawn and the withdrawal charge was deducted.",
+    };
+  } catch (error) {
+    return resultFromError(error);
+  }
 }
 
 export async function changeCompanyStatus(companyId: string, status: CompanyStatus) {
@@ -156,6 +190,15 @@ export async function finalizeCompany(companyId: string) {
   );
 }
 
+export async function finalizeAutomaticBidding(companyId: string) {
+  return rpcAction(
+    "admin",
+    "finalize_automatic_bidding",
+    { p_company_id: companyId },
+    "Automatic bidding closed and the top bids were selected.",
+  );
+}
+
 export async function adjustStudentPoints(
   studentId: string,
   amount: number,
@@ -187,6 +230,9 @@ const companySchema = z.object({
   bidIncrement: z.coerce.number().int().positive(),
   maximumBid: z.union([z.literal(""), z.coerce.number().int().positive()]),
   withdrawalPenaltyPercent: z.coerce.number().int().min(0).max(100),
+  responseDurationMinutes: z.coerce.number().int().min(1).max(1440),
+  biddingMode: z.enum(["committee", "automatic"]),
+  inactivityTimeoutSeconds: z.coerce.number().int().min(30).max(86400),
   opensAt: z.string(),
   closesAt: z.string(),
 });
@@ -217,6 +263,9 @@ function companyInputValues(value: z.infer<typeof companySchema>) {
     bid_increment: value.bidIncrement,
     maximum_bid: value.maximumBid === "" ? null : value.maximumBid,
     withdrawal_penalty_percent: value.withdrawalPenaltyPercent,
+    response_duration_minutes: value.responseDurationMinutes,
+    bidding_mode: value.biddingMode,
+    inactivity_timeout_seconds: value.inactivityTimeoutSeconds,
     opens_at: parseCompanyDateTime(value.opensAt),
     closes_at: parseCompanyDateTime(value.closesAt),
   };
@@ -264,6 +313,9 @@ export async function createCompany(
         minimum_bid: value.minimumBid,
         bid_increment: value.bidIncrement,
         withdrawal_penalty_percent: value.withdrawalPenaltyPercent,
+        response_duration_minutes: value.responseDurationMinutes,
+        bidding_mode: value.biddingMode,
+        inactivity_timeout_seconds: value.inactivityTimeoutSeconds,
       },
     });
     revalidatePath("/admin", "layout");
@@ -299,7 +351,7 @@ export async function updateCompany(
     const supabase = await createClient();
     const { data: existing, error: readError } = await supabase
       .from("companies")
-      .select("id,name,slug,status,current_bid,minimum_bid,cv_requirement,bid_increment,maximum_bid,withdrawal_penalty_percent")
+      .select("id,name,slug,status,current_bid,minimum_bid,cv_requirement,bid_increment,maximum_bid,withdrawal_penalty_percent,response_duration_minutes,bidding_mode,inactivity_timeout_seconds")
       .eq("id", value.companyId)
       .single();
     if (readError || !existing) throw new Error(readError?.message ?? "Company not found.");
@@ -343,6 +395,9 @@ export async function updateCompany(
         bid_increment: existing.bid_increment,
         maximum_bid: existing.maximum_bid,
         withdrawal_penalty_percent: existing.withdrawal_penalty_percent,
+        response_duration_minutes: existing.response_duration_minutes,
+        bidding_mode: existing.bidding_mode,
+        inactivity_timeout_seconds: existing.inactivity_timeout_seconds,
       },
       new_value: {
         name: value.name,
@@ -353,6 +408,9 @@ export async function updateCompany(
         bid_increment: value.bidIncrement,
         maximum_bid: companyValues.maximum_bid,
         withdrawal_penalty_percent: companyValues.withdrawal_penalty_percent,
+        response_duration_minutes: companyValues.response_duration_minutes,
+        bidding_mode: companyValues.bidding_mode,
+        inactivity_timeout_seconds: companyValues.inactivity_timeout_seconds,
       },
     });
 

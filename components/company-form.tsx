@@ -82,6 +82,32 @@ export function CompanyForm({ company }: { company?: Company }) {
       <div className="form-section-divider" />
       <div className="form-grid three">
         <label>
+          Bidding method
+          <select
+            name="biddingMode"
+            required
+            defaultValue={company?.bidding_mode ?? "committee"}
+            disabled={Boolean(company && company.status !== "upcoming")}
+          >
+            <option value="committee">Committee controlled</option>
+            <option value="automatic">Automatic ranked bids</option>
+          </select>
+          {company && company.status !== "upcoming" && (
+            <input type="hidden" name="biddingMode" value={company.bidding_mode} />
+          )}
+        </label>
+        <label>
+          Auto-bid inactivity timeout (seconds, automatic only)
+          <input
+            name="inactivityTimeoutSeconds"
+            type="number"
+            min="30"
+            max="86400"
+            required
+            defaultValue={company?.inactivity_timeout_seconds ?? 120}
+          />
+        </label>
+        <label>
           CV requirement
           <input name="cvRequirement" type="number" min="1" required defaultValue={company?.cv_requirement ?? 10} />
         </label>
@@ -97,7 +123,7 @@ export function CompanyForm({ company }: { company?: Company }) {
           />
         </label>
         <label>
-          Bid increment
+          Default round increment (committee only)
           <input name="bidIncrement" type="number" min="1" required defaultValue={company?.bid_increment ?? 5} />
         </label>
         <label>
@@ -121,6 +147,17 @@ export function CompanyForm({ company }: { company?: Company }) {
           />
         </label>
         <label>
+          Stay/Withdraw timeout (minutes, committee only)
+          <input
+            name="responseDurationMinutes"
+            type="number"
+            min="1"
+            max="1440"
+            required
+            defaultValue={company?.response_duration_minutes ?? 10}
+          />
+        </label>
+        <label>
           Opens at
           <input name="opensAt" type="datetime-local" defaultValue={dateTimeInputValue(company?.opens_at)} />
         </label>
@@ -132,7 +169,7 @@ export function CompanyForm({ company }: { company?: Company }) {
       <p className="form-timezone-note">Schedule times use Sri Lanka time (UTC+05:30).</p>
       {company && company.status !== "upcoming" && (
         <p className="setup-notice">
-          This company has already entered the bidding process. Its committee-controlled current bid is {company.current_bid} points. Use the live dashboard to increase it and request Stay or Withdraw responses.
+          This company has already entered the bidding process, so its bidding method is locked to {company.bidding_mode === "automatic" ? "automatic ranked bidding" : "committee control"}. {company.bidding_mode === "automatic" ? "Students can raise their own bids until the inactivity timer expires." : `Students have ${company.response_duration_minutes} minutes to answer each Stay or Withdraw request before they are force-withdrawn and charged.`}
         </p>
       )}
       {state.message && <p className={state.ok ? "inline-success" : "inline-error"}>{state.message}</p>}

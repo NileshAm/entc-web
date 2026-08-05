@@ -11,9 +11,10 @@ import {
   Users,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
+import { Countdown } from "@/components/countdown";
 import { PublicAnalyticsRealtime } from "@/components/public-analytics-realtime";
 import { StatusBadge } from "@/components/status-badge";
-import { demandCategory, formatDateTime, participantStatusLabel } from "@/lib/business";
+import { demandCategory, formatDateTime, participantRankingLabel } from "@/lib/business";
 import { getPublicBidAnalytics } from "@/lib/data";
 import { isSupabaseConfigured } from "@/lib/env";
 import type { PublicCompanyAnalytics } from "@/lib/types";
@@ -66,7 +67,7 @@ export default async function PublicAnalyticsPage() {
           <div>
             <div className="eyebrow"><Eye size={15} /> Public bidding view</div>
             <h1>Current bids.<br /><span>Clear demand.</span></h1>
-            <p>Follow committee-controlled bids, demand, and the students currently participating in each company session.</p>
+            <p>Follow committee-controlled sessions and automatic ranked auctions, including demand and current participants.</p>
             {configured && !unavailable && <PublicAnalyticsRealtime />}
           </div>
           <article className={`public-live-card ${liveCompany ? "active" : ""}`}>
@@ -79,15 +80,16 @@ export default async function PublicAnalyticsPage() {
                 <h2>{liveCompany.name}</h2>
                 <p>{liveCompany.industry} · {liveCompany.location}</p>
                 <div className="public-current-bid">
-                  <span>Current bid</span>
+                  <span>{liveCompany.bidding_mode === "automatic" ? "Highest bid" : "Current bid"}</span>
                   <strong>{liveCompany.current_bid}<small> points</small></strong>
                 </div>
                 <div className="public-live-facts">
                   <span><strong>{liveCompany.applicant_count}</strong>Applicants</span>
                   <span><strong>{liveCompany.cv_requirement}</strong>CV slots</span>
-                  <span><strong>{liveCompany.maximum_bid ?? "—"}</strong>Maximum bid</span>
+                  <span><strong>{liveCompany.bidding_mode === "automatic" ? "Automatic" : "Committee"}</strong>Method</span>
                   <span><strong>{liveCompany.demand_ratio.toFixed(2)}×</strong>Demand</span>
                 </div>
+                {liveCompany.bidding_mode === "automatic" && liveCompany.auto_closes_at && liveCompany.status === "open" && <div className="public-auto-close"><CalendarClock /><span><small>CLOSES AFTER INACTIVITY</small><strong><Countdown deadline={liveCompany.auto_closes_at} /></strong></span></div>}
               </>
             ) : (
               <div className="public-no-live">
@@ -125,7 +127,7 @@ export default async function PublicAnalyticsPage() {
               <ShieldCheck />
               <div>
                 <strong>Limited public applicant details</strong>
-                <span>Only applicant names and bidding status are public. Emails, index numbers, point balances, staff records, audit logs, contacts, and internal notes remain private.</span>
+                <span>Only applicant names and bidding state are public; automatic auctions also show bid and rank. Emails, index numbers, balances, staff records, audit logs, contacts, and internal notes remain private.</span>
               </div>
             </section>
 
@@ -172,18 +174,19 @@ export default async function PublicAnalyticsPage() {
               </div>
               <div className="data-table-wrap">
                 <table className="data-table">
-                  <thead><tr><th>Company</th><th>Status</th><th>Current bid</th><th>Maximum</th><th>Applicants</th><th>CV slots</th><th>Demand</th><th>Closes</th></tr></thead>
+                  <thead><tr><th>Company</th><th>Method</th><th>Status</th><th>{"Current / highest bid"}</th><th>Maximum</th><th>Applicants</th><th>CV slots</th><th>Demand</th><th>Closes</th></tr></thead>
                   <tbody>
                     {companies.map((company) => (
                       <tr key={company.id}>
                         <td><strong>{company.name}</strong><small className="public-company-meta">{company.industry} · {company.location}</small></td>
+                        <td>{company.bidding_mode === "automatic" ? "Automatic" : "Committee"}</td>
                         <td><StatusBadge status={company.status} /></td>
                         <td><strong>{company.current_bid} pts</strong></td>
                         <td>{company.maximum_bid ? `${company.maximum_bid} pts` : "—"}</td>
                         <td>{company.applicant_count}</td>
                         <td>{company.cv_requirement}</td>
                         <td><strong className={company.demand_ratio > 1 ? "danger-text" : ""}>{company.demand_ratio.toFixed(2)}×</strong></td>
-                        <td>{formatDateTime(company.closes_at)}</td>
+                        <td>{company.bidding_mode === "automatic" && company.auto_closes_at ? <Countdown deadline={company.auto_closes_at} /> : formatDateTime(company.closes_at)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -193,7 +196,7 @@ export default async function PublicAnalyticsPage() {
 
             <section className="public-panel public-applicants-panel">
               <div className="section-title-row">
-                <div><span className="page-kicker">CURRENT APPLICANTS</span><h2>Students bidding by company</h2></div>
+                <div><span className="page-kicker">BID ROSTERS</span><h2>Student rankings by company</h2></div>
                 <Users />
               </div>
               <div className="public-applicant-grid">
@@ -209,14 +212,14 @@ export default async function PublicAnalyticsPage() {
                           <li key={`${participant.full_name}-${index}`}>
                             <span className="participant-avatar" aria-hidden="true">{participant.full_name.charAt(0).toUpperCase()}</span>
                             <span>{participant.full_name}</span>
-                            <small className={participant.response_state}>
-                              {participantStatusLabel(participant.response_state)}
+                            <small className={["withdrawn", "not_selected", "selected", "finalized"].includes(participant.response_state) ? participant.response_state : participant.is_currently_selected ? participant.response_state : "pending"}>
+                              {participantRankingLabel(participant, company.bidding_mode, company.cv_requirement)}
                             </small>
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <p className="participant-empty">No students are currently bidding for this company.</p>
+                      <p className="participant-empty">No applications have been submitted for this company.</p>
                     )}
                   </article>
                 ))}
@@ -228,7 +231,7 @@ export default async function PublicAnalyticsPage() {
 
       <footer className="marketing-footer page-container">
         <Logo />
-        <p>Public bidding data includes current applicant names and response status.</p>
+        <p>Public bidding data includes current applicant names, status, and automatic-auction rankings.</p>
         <Link href="/">InternBid home</Link>
       </footer>
     </div>

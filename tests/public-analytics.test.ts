@@ -15,9 +15,13 @@ describe("public analytics DTO", () => {
       closes_at: null,
       status: "open",
       applicant_count: 15,
+      bidding_mode: "automatic",
+      inactivity_timeout_seconds: 120,
+      auto_closes_at: "2026-08-06T12:00:00.000Z",
       participants: [
-        { full_name: "Nimal Perera", response_state: "staying", email: "private@example.com" },
-        { full_name: "Amara Silva", response_state: "pending", registration_number: "200012A" },
+        { full_name: "Nimal Perera", response_state: "staying", bid_amount: 45, rank_position: 1, is_currently_selected: true, email: "private@example.com" },
+        { full_name: "Amara Silva", response_state: "pending", bid_amount: 40, rank_position: 2, is_currently_selected: true, registration_number: "200012A" },
+        { full_name: "Kamal Fernando", response_state: "withdrawn", bid_amount: 35, rank_position: null, is_currently_selected: false },
       ],
       created_by: "private-admin-id",
       internal_notes: "private committee notes",
@@ -26,8 +30,9 @@ describe("public analytics DTO", () => {
 
     expect(company.demand_ratio).toBe(1.5);
     expect(company.participants).toEqual([
-      { full_name: "Nimal Perera", response_state: "staying" },
-      { full_name: "Amara Silva", response_state: "pending" },
+      { full_name: "Nimal Perera", response_state: "staying", bid_amount: 45, rank_position: 1, is_currently_selected: true },
+      { full_name: "Amara Silva", response_state: "pending", bid_amount: 40, rank_position: 2, is_currently_selected: true },
+      { full_name: "Kamal Fernando", response_state: "withdrawn", bid_amount: 35, rank_position: null, is_currently_selected: false },
     ]);
     expect(company.participants[0]).not.toHaveProperty("email");
     expect(company.participants[1]).not.toHaveProperty("registration_number");
