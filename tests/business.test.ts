@@ -4,6 +4,7 @@ import {
   demandCategory,
   formatStatus,
   initials,
+  participantStatusLabel,
 } from "../lib/business";
 
 describe("point balance rules", () => {
@@ -51,5 +52,14 @@ describe("display helpers", () => {
 
   it("creates two-letter initials", () => {
     expect(initials("Nimal Perera Silva")).toBe("NP");
+  });
+
+  it.each([
+    ["staying", "Staying"],
+    ["pending", "Response pending"],
+    ["selected", "Selected"],
+    ["finalized", "Finalized"],
+  ] as const)("formats participant status %s", (status, expected) => {
+    expect(participantStatusLabel(status)).toBe(expected);
   });
 });

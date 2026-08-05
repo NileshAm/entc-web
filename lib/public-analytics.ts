@@ -1,6 +1,11 @@
 import { z } from "zod";
 import type { PublicCompanyAnalytics } from "@/lib/types";
 
+const publicParticipantSchema = z.object({
+  full_name: z.string().min(1),
+  response_state: z.enum(["staying", "pending", "selected", "finalized"]),
+});
+
 const publicAnalyticsRowSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
@@ -21,6 +26,7 @@ const publicAnalyticsRowSchema = z.object({
     "cancelled",
   ]),
   applicant_count: z.number().int().nonnegative(),
+  participants: z.array(publicParticipantSchema),
 });
 
 export function normalizePublicCompanyAnalytics(row: unknown): PublicCompanyAnalytics {
@@ -37,6 +43,7 @@ export function normalizePublicCompanyAnalytics(row: unknown): PublicCompanyAnal
     closes_at: company.closes_at,
     status: company.status,
     applicant_count: company.applicant_count,
+    participants: company.participants,
     demand_ratio: company.applicant_count / company.cv_requirement,
   };
 }

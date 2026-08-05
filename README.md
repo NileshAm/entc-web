@@ -11,7 +11,7 @@ InternBid is a mobile-friendly internship company bidding and CV allocation syst
 - Responsive student portal with point balances, Stay or Withdraw bid responses, participant names, private notifications, and a point ledger.
 - Administrator control room with live applicant demand, current-bid increases, response monitoring, finalization, company setup, student point adjustments, analytics, CSV exports, and an audit log.
 - Admin-only company editing with audited changes to catalogue details, bid rules, and schedules.
-- A public `/analytics` page with realtime current bids and aggregate demand. Its database function returns only company statistics and never exposes student, staff, contact, point-balance, or audit data.
+- A public `/analytics` page with realtime current bids, aggregate demand, and current applicant names with their bidding status. Emails, student indexes, points, and administrative data remain private.
 - PostgreSQL row-level security and locked, transactional RPCs for every point-changing bidding action.
 - Private Supabase Broadcast channels. Live events contain company metrics only; student identities are never broadcast to other students.
 - Cloudflare Workers deployment through the official OpenNext adapter.
@@ -19,7 +19,7 @@ InternBid is a mobile-friendly internship company bidding and CV allocation syst
 ## 1. Create the Supabase project
 
 1. Create a project in Supabase.
-2. Open the SQL editor and run the files in `supabase/migrations` in filename order, or link the Supabase CLI and run `supabase db push`. Existing installations must apply every migration newer than the latest entry in their migration history, including `202608050003_admin_controlled_bidding.sql` for committee-controlled bid increases.
+2. Open the SQL editor and run the files in `supabase/migrations` in filename order, or link the Supabase CLI and run `supabase db push`. Existing installations must apply every migration newer than the latest entry in their migration history, including `202608050003_admin_controlled_bidding.sql` for committee-controlled bid increases and `202608060001_public_bid_participants.sql` for applicant lists and statuses.
 3. If Google sign-in is enabled, open **Authentication → URL Configuration** and add:
    - `http://localhost:3000/auth/callback`
    - `https://your-production-domain/auth/callback`
@@ -188,7 +188,7 @@ These defaults are stored in `system_settings` for visibility. Some policy chang
 - Authenticated pages are dynamically rendered and must not be cached by a CDN.
 - `middleware.ts` refreshes sessions using `getClaims()` and forwards Supabase’s private/no-store cache headers. Next.js 16 normally calls this boundary `proxy.ts`; the current OpenNext Cloudflare adapter still requires the legacy Edge Middleware filename because it does not yet support Node-runtime Proxy.
 - Students have no direct `INSERT` or `UPDATE` policy on applications, balances, bid history, or audit logs.
-- Anonymous users have no direct table access. Public analytics is served by a security-definer function with an explicit, minimal return shape, and its public realtime event contains only the changed company ID.
+- Anonymous users have no direct table access. Public analytics is served by a security-definer function that returns company statistics plus current applicant names and response status; its public realtime event contains only the changed company ID.
 - The authenticated participant-list function exposes names and response state only; it does not relax profile RLS or publish identities over public realtime.
 - Bid responses, withdrawal charges, and finalization lock affected rows and update balances in PostgreSQL transactions.
 - Important mutations re-check authentication and role inside the database, even when the UI hides the control.

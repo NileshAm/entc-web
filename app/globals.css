@@ -189,6 +189,20 @@ button { color: inherit; }
 .public-demand-summary article b { font-size: 13px; }
 .public-company-meta { display: block; margin-top: 3px; color: var(--muted); font-size: 7px; font-weight: 500; }
 .public-company-table { margin-top: 0; }
+.public-applicants-panel .section-title-row > svg { color: #6d8a56; }
+.public-applicant-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 18px; }
+.public-applicant-company { min-width: 0; padding: 18px; border: 1px solid #d7e1d2; border-radius: 12px; background: #fafcf9; box-shadow: 0 7px 20px rgba(36, 59, 42, .06); }
+.public-applicant-company > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.public-applicant-company > header > span:first-child { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.public-applicant-company > header strong { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.public-applicant-company > header small { color: var(--muted); font-size: 9px; }
+.public-participant-list { max-height: 260px; margin: 14px 0 0; padding: 0; overflow-y: auto; list-style: none; }
+.public-participant-list li { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 48px; padding: 8px 4px; border-top: 1px solid var(--line-soft); font-size: 11px; font-weight: 650; }
+.public-participant-list li > span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.public-participant-list li small { padding: 5px 8px; border-radius: 999px; font-size: 8px; font-weight: 800; white-space: nowrap; }
+.public-participant-list li small.staying { color: #557345; background: #eaf3e5; }
+.public-participant-list li small.pending { color: #93651c; background: #fff2d6; }
+.public-participant-list li small.selected, .public-participant-list li small.finalized { color: #385f86; background: #e5f0fa; }
 .public-analytics-page .marketing-footer > a { color: var(--muted); font-size: 11px; }
 
 /* Authentication */
@@ -365,17 +379,20 @@ input:focus, textarea:focus, select:focus { border-color: #8ca570 !important; bo
 .action-required-box strong { font-size: 9px; }
 .action-required-box small { margin-top: 3px; font-size: 7px; }
 .action-required-box button { border: 0; border-radius: 6px; background: #d9a552; color: #35230d; padding: 7px 9px; font-size: 8px; font-weight: 800; cursor: pointer; }
-.participant-panel { margin-top: 13px; padding: 11px; border: 1px solid var(--line-soft); border-radius: 9px; background: #fafcf9; }
+.participant-panel { margin-top: 15px; padding: 15px; border: 1px solid #d2dfcd; border-radius: 11px; background: #f8fbf6; box-shadow: 0 7px 20px rgba(36, 59, 42, .07); }
 .participant-panel-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-.participant-panel-head > span:first-child { display: flex; flex-direction: column; gap: 2px; }
-.participant-panel-head strong { font-size: 9px; }
-.participant-panel-head small, .participant-empty { color: var(--muted); font-size: 7px; }
-.slots-chip { flex: 0 0 auto; padding: 4px 7px; border-radius: 999px; background: #eaf3e5; color: #557345; font-size: 7px; font-weight: 800; }
-.participant-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; max-height: 145px; overflow-y: auto; margin: 9px 0 0; padding: 0; list-style: none; }
-.participant-list li { min-width: 0; display: grid; grid-template-columns: 20px minmax(0, 1fr); align-items: center; gap: 6px; padding: 6px; border-radius: 7px; background: white; font-size: 8px; }
+.participant-panel-head > span:first-child { display: flex; flex-direction: column; gap: 4px; }
+.participant-panel-head strong { font-size: 12px; }
+.participant-panel-head small, .participant-empty { color: var(--muted); font-size: 9px; }
+.slots-chip { flex: 0 0 auto; padding: 6px 9px; border-radius: 999px; background: #e1efdb; color: #49683d; font-size: 9px; font-weight: 850; }
+.participant-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-height: 220px; overflow-y: auto; margin: 13px 0 0; padding: 0; list-style: none; }
+.participant-list li { min-width: 0; display: grid; grid-template-columns: 30px minmax(0, 1fr); align-items: center; gap: 9px; padding: 9px; border: 1px solid #edf1eb; border-radius: 9px; background: white; font-size: 11px; font-weight: 650; }
 .participant-list li > span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.participant-list li small { grid-column: 2; color: var(--warning); font-size: 6px; }
-.participant-avatar { grid-row: 1 / span 2; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; background: #e7eee3; color: #58704d; font-size: 8px; font-weight: 800; }
+.participant-list li small { grid-column: 2; width: fit-content; padding: 3px 7px; border-radius: 999px; font-size: 8px; font-weight: 800; }
+.participant-list li small.pending { color: #93651c; background: #fff2d6; }
+.participant-list li small.staying { color: #49683d; background: #e7f2e2; }
+.participant-list li small.selected, .participant-list li small.finalized { color: #385f86; background: #e5f0fa; }
+.participant-avatar { grid-row: 1 / span 2; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: #dfeadd; color: #49683d; font-size: 10px; font-weight: 850; }
 .participant-empty { margin: 9px 0 0; }
 .filter-bar { min-height: 58px; display: flex; align-items: center; gap: 10px; padding: 9px; border: 1px solid var(--line); border-radius: 11px; background: white; }
 .search-field, .select-field { position: relative; display: flex; align-items: center; height: 39px; border: 1px solid #d9dfda; border-radius: 8px; background: #fbfcfb; color: var(--muted); }
@@ -622,6 +639,9 @@ input:focus, textarea:focus, select:focus { border-color: #8ca570 !important; bo
   .public-metric-grid strong { font-size: 22px; }
   .public-privacy-banner { align-items: flex-start; }
   .public-panel { padding: 16px; }
+  .public-applicant-grid { grid-template-columns: 1fr; }
+  .public-participant-list li { grid-template-columns: 30px minmax(0, 1fr); }
+  .public-participant-list li small { grid-column: 2; width: fit-content; }
   .public-chart-card .bar-row { grid-template-columns: 78px 1fr 34px; gap: 7px; }
   .public-chart-card .chart-legend { margin-left: 0; }
   .hero { padding-top: 35px; }

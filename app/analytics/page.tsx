@@ -13,14 +13,14 @@ import {
 import { Logo } from "@/components/logo";
 import { PublicAnalyticsRealtime } from "@/components/public-analytics-realtime";
 import { StatusBadge } from "@/components/status-badge";
-import { demandCategory, formatDateTime } from "@/lib/business";
+import { demandCategory, formatDateTime, participantStatusLabel } from "@/lib/business";
 import { getPublicBidAnalytics } from "@/lib/data";
 import { isSupabaseConfigured } from "@/lib/env";
 import type { PublicCompanyAnalytics } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "Public bidding analytics",
-  description: "Live, privacy-safe internship company bid and demand statistics.",
+  description: "Live internship company bids, demand, and current applicant status.",
 };
 
 export const dynamic = "force-dynamic";
@@ -66,7 +66,7 @@ export default async function PublicAnalyticsPage() {
           <div>
             <div className="eyebrow"><Eye size={15} /> Public bidding view</div>
             <h1>Current bids.<br /><span>Clear demand.</span></h1>
-            <p>Follow committee-controlled current bids and aggregated demand without exposing identities or administrator records.</p>
+            <p>Follow committee-controlled bids, demand, and the students currently participating in each company session.</p>
             {configured && !unavailable && <PublicAnalyticsRealtime />}
           </div>
           <article className={`public-live-card ${liveCompany ? "active" : ""}`}>
@@ -116,7 +116,7 @@ export default async function PublicAnalyticsPage() {
           <>
             <section className="public-metric-grid">
               <article><span className="metric-icon blue"><Building2 /></span><div><small>PUBLIC COMPANIES</small><strong>{companies.length}</strong><p>Cancelled listings excluded</p></div></article>
-              <article><span className="metric-icon purple"><Users /></span><div><small>APPLICANTS</small><strong>{totalApplicants}</strong><p>Aggregated count only</p></div></article>
+              <article><span className="metric-icon purple"><Users /></span><div><small>APPLICANTS</small><strong>{totalApplicants}</strong><p>Current bidding participants</p></div></article>
               <article><span className="metric-icon amber"><CalendarClock /></span><div><small>CV SLOTS</small><strong>{totalSlots}</strong><p>Across visible companies</p></div></article>
               <article className="emphasis"><span className="metric-icon"><Gavel /></span><div><small>CURRENT LIVE BID</small><strong>{liveCompany ? liveCompany.current_bid : "—"}</strong><p>{liveCompany?.name ?? "No active session"}</p></div></article>
             </section>
@@ -124,8 +124,8 @@ export default async function PublicAnalyticsPage() {
             <section className="public-privacy-banner">
               <ShieldCheck />
               <div>
-                <strong>Privacy-safe by design</strong>
-                <span>This page never receives names, emails, index numbers, point balances, staff records, audit logs, contacts, or internal notes.</span>
+                <strong>Limited public applicant details</strong>
+                <span>Only applicant names and bidding status are public. Emails, index numbers, point balances, staff records, audit logs, contacts, and internal notes remain private.</span>
               </div>
             </section>
 
@@ -190,13 +190,45 @@ export default async function PublicAnalyticsPage() {
                 </table>
               </div>
             </section>
+
+            <section className="public-panel public-applicants-panel">
+              <div className="section-title-row">
+                <div><span className="page-kicker">CURRENT APPLICANTS</span><h2>Students bidding by company</h2></div>
+                <Users />
+              </div>
+              <div className="public-applicant-grid">
+                {companies.map((company) => (
+                  <article key={company.id} className="public-applicant-company">
+                    <header>
+                      <span><strong>{company.name}</strong><small>{company.participants.length} students · {company.cv_requirement} slots</small></span>
+                      <StatusBadge status={company.status} />
+                    </header>
+                    {company.participants.length ? (
+                      <ul className="public-participant-list">
+                        {company.participants.map((participant, index) => (
+                          <li key={`${participant.full_name}-${index}`}>
+                            <span className="participant-avatar" aria-hidden="true">{participant.full_name.charAt(0).toUpperCase()}</span>
+                            <span>{participant.full_name}</span>
+                            <small className={participant.response_state}>
+                              {participantStatusLabel(participant.response_state)}
+                            </small>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="participant-empty">No students are currently bidding for this company.</p>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </section>
           </>
         )}
       </main>
 
       <footer className="marketing-footer page-container">
         <Logo />
-        <p>Public statistics contain aggregated company bidding data only.</p>
+        <p>Public bidding data includes current applicant names and response status.</p>
         <Link href="/">InternBid home</Link>
       </footer>
     </div>

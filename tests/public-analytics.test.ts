@@ -15,12 +15,22 @@ describe("public analytics DTO", () => {
       closes_at: null,
       status: "open",
       applicant_count: 15,
+      participants: [
+        { full_name: "Nimal Perera", response_state: "staying", email: "private@example.com" },
+        { full_name: "Amara Silva", response_state: "pending", registration_number: "200012A" },
+      ],
       created_by: "private-admin-id",
       internal_notes: "private committee notes",
       contact_email: "private@example.com",
     });
 
     expect(company.demand_ratio).toBe(1.5);
+    expect(company.participants).toEqual([
+      { full_name: "Nimal Perera", response_state: "staying" },
+      { full_name: "Amara Silva", response_state: "pending" },
+    ]);
+    expect(company.participants[0]).not.toHaveProperty("email");
+    expect(company.participants[1]).not.toHaveProperty("registration_number");
     expect(company).not.toHaveProperty("created_by");
     expect(company).not.toHaveProperty("internal_notes");
     expect(company).not.toHaveProperty("contact_email");

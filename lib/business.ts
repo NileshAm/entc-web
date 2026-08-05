@@ -1,4 +1,4 @@
-import type { CompanyStatus } from "@/lib/types";
+import type { BidParticipant, CompanyStatus } from "@/lib/types";
 
 export function availablePoints(profile: {
   initial_points: number;
@@ -33,6 +33,16 @@ export function formatStatus(status: CompanyStatus | string) {
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
+}
+
+export function participantStatusLabel(status: BidParticipant["response_state"]) {
+  const labels: Record<BidParticipant["response_state"], string> = {
+    staying: "Staying",
+    pending: "Response pending",
+    selected: "Selected",
+    finalized: "Finalized",
+  };
+  return labels[status];
 }
 
 export function formatDateTime(value: string | null) {

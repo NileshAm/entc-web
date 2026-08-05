@@ -17,7 +17,7 @@ import { CompanyAvatar } from "@/components/company-avatar";
 import { Countdown } from "@/components/countdown";
 import { StatusBadge } from "@/components/status-badge";
 import { calculateIncreaseWithdrawalCharge } from "@/lib/bidding";
-import { demandCategory, formatStatus } from "@/lib/business";
+import { demandCategory, formatStatus, participantStatusLabel } from "@/lib/business";
 import type { ActionState, Company } from "@/lib/types";
 
 export function CompanyCard({
@@ -116,7 +116,9 @@ export function CompanyCard({
                 <li key={`${participant.full_name}-${index}`}>
                   <span className="participant-avatar" aria-hidden="true">{participant.full_name.charAt(0).toUpperCase()}</span>
                   <span>{participant.full_name}</span>
-                  {participant.response_state === "pending" && <small>Response pending</small>}
+                  <small className={participant.response_state}>
+                    {participantStatusLabel(participant.response_state)}
+                  </small>
                 </li>
               ))}
             </ul>

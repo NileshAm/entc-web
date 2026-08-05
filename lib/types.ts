@@ -66,7 +66,7 @@ export interface Company {
 
 export interface BidParticipant {
   full_name: string;
-  response_state: "staying" | "pending";
+  response_state: "staying" | "pending" | "selected" | "finalized";
 }
 
 export interface PublicCompanyAnalytics {
@@ -81,6 +81,7 @@ export interface PublicCompanyAnalytics {
   closes_at: string | null;
   status: CompanyStatus;
   applicant_count: number;
+  participants: BidParticipant[];
   demand_ratio: number;
 }
 
