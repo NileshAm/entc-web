@@ -8,7 +8,7 @@ import type { ActionState } from "@/lib/types";
 
 const initialState: ActionState = { ok: false, message: "" };
 
-export function SignupForm({ configured, domain }: { configured: boolean; domain: string }) {
+export function SignupForm({ configured }: { configured: boolean }) {
   const [state, action, pending] = useActionState(registerStudent, initialState);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -21,8 +21,8 @@ export function SignupForm({ configured, domain }: { configured: boolean; domain
           <strong>Account created</strong>
           <p>{state.message}</p>
         </div>
-        <Link className="button button-primary" href="/login">
-          Go to sign in <ArrowRight size={18} />
+        <Link className="button button-primary" href="/dashboard">
+          Continue to dashboard <ArrowRight size={18} />
         </Link>
       </div>
     );
@@ -61,17 +61,16 @@ export function SignupForm({ configured, domain }: { configured: boolean; domain
         </label>
       </div>
       <label>
-        University email
+        Email
         <input
           name="email"
           type="email"
           inputMode="email"
           autoComplete="email"
-          placeholder={domain ? `you@${domain}` : "you@university.edu"}
+          placeholder="you@example.com"
           required
           disabled={!configured || pending}
         />
-        {domain && <small className="field-hint">Only @{domain} addresses are accepted.</small>}
       </label>
       <label>
         Password

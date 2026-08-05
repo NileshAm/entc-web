@@ -8,6 +8,7 @@ import { getCurrentProfile } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Sign in" };
+export const dynamic = "force-dynamic";
 
 export default async function LoginPage() {
   if (isSupabaseConfigured()) {
@@ -26,7 +27,7 @@ export default async function LoginPage() {
             <p>Make informed bids, protect your points, and follow every result in realtime.</p>
             <ul>
               <li><CheckCircle2 /> Clear point reservations before you confirm</li>
-              <li><CheckCircle2 /> Instant bid increase notifications</li>
+              <li><CheckCircle2 /> Instant Stay or Withdraw notifications</li>
               <li><CheckCircle2 /> A complete, private activity history</li>
             </ul>
           </div>

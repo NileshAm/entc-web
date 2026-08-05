@@ -5,6 +5,7 @@ import { normalizePublicCompanyAnalytics } from "@/lib/public-analytics";
 import type {
   Application,
   AuditLog,
+  BidParticipant,
   Company,
   Notification,
   PointTransaction,
@@ -21,6 +22,7 @@ function normalizeCompany(row: Record<string, unknown>): Company {
     confirmed_count: Number(row.confirmed_count ?? 0),
     pending_count: Number(row.pending_count ?? 0),
     withdrawal_count: Number(row.withdrawal_count ?? 0),
+    withdrawal_penalty_percent: Number(row.withdrawal_penalty_percent ?? 10),
     demand_ratio: cvRequirement > 0 ? applicantCount / cvRequirement : 0,
   };
 }
@@ -52,9 +54,24 @@ export async function getStudentData(studentId: string) {
 
   const applications = (applicationsResult.data ?? []) as unknown as Application[];
   const applicationByCompany = new Map(applications.map((application) => [application.company_id, application]));
-  const companies = (companiesResult.data ?? []).map((row) => ({
+  const normalizedCompanies = (companiesResult.data ?? []).map((row) => ({
     ...normalizeCompany(row),
     application: applicationByCompany.get(String(row.id)) ?? null,
+  }));
+  const liveCompany = normalizedCompanies.find((company) =>
+    ["open", "paused", "bid_increase_pending"].includes(company.status),
+  );
+  let participants: BidParticipant[] = [];
+  if (liveCompany) {
+    const { data, error } = await supabase.rpc("get_bid_participants", {
+      p_company_id: liveCompany.id,
+    });
+    if (error) throw new Error(error.message);
+    participants = (data ?? []) as BidParticipant[];
+  }
+  const companies = normalizedCompanies.map((company) => ({
+    ...company,
+    ...(company.id === liveCompany?.id ? { participants } : {}),
   }));
 
   return {
@@ -75,16 +92,22 @@ export async function getCompanyBySlug(slug: string, studentId: string) {
     .single();
   if (!company) return null;
 
-  const { data: application } = await supabase
-    .from("applications")
-    .select("*")
-    .eq("company_id", company.id)
-    .eq("student_id", studentId)
-    .maybeSingle();
+  const [applicationResult, participantResult] = await Promise.all([
+    supabase
+      .from("applications")
+      .select("*")
+      .eq("company_id", company.id)
+      .eq("student_id", studentId)
+      .maybeSingle(),
+    supabase.rpc("get_bid_participants", { p_company_id: company.id }),
+  ]);
+
+  if (participantResult.error) throw new Error(participantResult.error.message);
 
   return {
     ...normalizeCompany(company),
-    application: (application as Application | null) ?? null,
+    application: (applicationResult.data as Application | null) ?? null,
+    participants: (participantResult.data ?? []) as BidParticipant[],
   };
 }
 
@@ -126,7 +149,7 @@ export async function getCompanyForAdminEdit(companyId: string) {
   const { data, error } = await supabase
     .from("companies")
     .select(
-      "id,name,slug,description,industry,location,available_roles,required_skills,cv_requirement,minimum_bid,current_bid,bid_increment,maximum_bid,opens_at,closes_at,status,applicant_count,confirmed_count,pending_count,withdrawal_count",
+      "id,name,slug,description,industry,location,available_roles,required_skills,cv_requirement,minimum_bid,current_bid,bid_increment,maximum_bid,withdrawal_penalty_percent,opens_at,closes_at,status,applicant_count,confirmed_count,pending_count,withdrawal_count",
     )
     .eq("id", companyId)
     .maybeSingle();

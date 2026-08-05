@@ -66,7 +66,7 @@ export default async function StudentPage() {
           </div>
         </section>
       </div>
-      <aside className="dashboard-tip"><TrendingUp /><span><strong>How demand works</strong>Applicant counts are visible to everyone, but student identities stay private. When demand exceeds CV slots, the committee may increase the bid.</span></aside>
+      <aside className="dashboard-tip"><TrendingUp /><span><strong>How bid increases work</strong>The committee may increase an oversubscribed company’s current bid. You will be notified to choose Stay or Withdraw before the response deadline.</span></aside>
     </div>
   );
 }

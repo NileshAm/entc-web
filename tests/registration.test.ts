@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  isUniversityEmailAllowed,
-  normalizeUniversityDomain,
-  studentRegistrationSchema,
-} from "../lib/registration";
+import { studentRegistrationSchema } from "../lib/registration";
 
 const validRegistration = {
   fullName: "Nimal Perera",
@@ -35,10 +31,12 @@ describe("student registration", () => {
     expect(result.success).toBe(false);
   });
 
-  it("normalizes and enforces the configured university domain", () => {
-    const domain = normalizeUniversityDomain(" @UOM.LK ");
-    expect(domain).toBe("uom.lk");
-    expect(isUniversityEmailAllowed("student@uom.lk", domain)).toBe(true);
-    expect(isUniversityEmailAllowed("student@gmail.com", domain)).toBe(false);
+  it("accepts valid email addresses from any domain", () => {
+    const result = studentRegistrationSchema.safeParse({
+      ...validRegistration,
+      email: "student@gmail.com",
+    });
+
+    expect(result.success).toBe(true);
   });
 });

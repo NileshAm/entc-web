@@ -66,7 +66,7 @@ export default async function PublicAnalyticsPage() {
           <div>
             <div className="eyebrow"><Eye size={15} /> Public bidding view</div>
             <h1>Current bids.<br /><span>Clear demand.</span></h1>
-            <p>Follow company bids and aggregated demand without exposing student, committee, or administrator records.</p>
+            <p>Follow committee-controlled current bids and aggregated demand without exposing identities or administrator records.</p>
             {configured && !unavailable && <PublicAnalyticsRealtime />}
           </div>
           <article className={`public-live-card ${liveCompany ? "active" : ""}`}>
@@ -85,6 +85,7 @@ export default async function PublicAnalyticsPage() {
                 <div className="public-live-facts">
                   <span><strong>{liveCompany.applicant_count}</strong>Applicants</span>
                   <span><strong>{liveCompany.cv_requirement}</strong>CV slots</span>
+                  <span><strong>{liveCompany.maximum_bid ?? "—"}</strong>Maximum bid</span>
                   <span><strong>{liveCompany.demand_ratio.toFixed(2)}×</strong>Demand</span>
                 </div>
               </>
@@ -117,7 +118,7 @@ export default async function PublicAnalyticsPage() {
               <article><span className="metric-icon blue"><Building2 /></span><div><small>PUBLIC COMPANIES</small><strong>{companies.length}</strong><p>Cancelled listings excluded</p></div></article>
               <article><span className="metric-icon purple"><Users /></span><div><small>APPLICANTS</small><strong>{totalApplicants}</strong><p>Aggregated count only</p></div></article>
               <article><span className="metric-icon amber"><CalendarClock /></span><div><small>CV SLOTS</small><strong>{totalSlots}</strong><p>Across visible companies</p></div></article>
-              <article className="emphasis"><span className="metric-icon"><Gavel /></span><div><small>LIVE BID</small><strong>{liveCompany ? liveCompany.current_bid : "—"}</strong><p>{liveCompany?.name ?? "No active session"}</p></div></article>
+              <article className="emphasis"><span className="metric-icon"><Gavel /></span><div><small>CURRENT LIVE BID</small><strong>{liveCompany ? liveCompany.current_bid : "—"}</strong><p>{liveCompany?.name ?? "No active session"}</p></div></article>
             </section>
 
             <section className="public-privacy-banner">
@@ -171,13 +172,14 @@ export default async function PublicAnalyticsPage() {
               </div>
               <div className="data-table-wrap">
                 <table className="data-table">
-                  <thead><tr><th>Company</th><th>Status</th><th>Current bid</th><th>Applicants</th><th>CV slots</th><th>Demand</th><th>Closes</th></tr></thead>
+                  <thead><tr><th>Company</th><th>Status</th><th>Current bid</th><th>Maximum</th><th>Applicants</th><th>CV slots</th><th>Demand</th><th>Closes</th></tr></thead>
                   <tbody>
                     {companies.map((company) => (
                       <tr key={company.id}>
                         <td><strong>{company.name}</strong><small className="public-company-meta">{company.industry} · {company.location}</small></td>
                         <td><StatusBadge status={company.status} /></td>
                         <td><strong>{company.current_bid} pts</strong></td>
+                        <td>{company.maximum_bid ? `${company.maximum_bid} pts` : "—"}</td>
                         <td>{company.applicant_count}</td>
                         <td>{company.cv_requirement}</td>
                         <td><strong className={company.demand_ratio > 1 ? "danger-text" : ""}>{company.demand_ratio.toFixed(2)}×</strong></td>

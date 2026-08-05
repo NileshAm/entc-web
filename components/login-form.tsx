@@ -4,7 +4,6 @@ import { useState } from "react";
 import { ArrowRight, Eye, EyeOff, LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { getSiteUrl } from "@/lib/env";
 
 export function LoginForm({ configured }: { configured: boolean }) {
   const router = useRouter();
@@ -39,7 +38,9 @@ export function LoginForm({ configured }: { configured: boolean }) {
     const supabase = createClient();
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${getSiteUrl()}/auth/callback` },
+      // Use the origin serving this browser so production OAuth can never
+      // inherit a localhost URL that was present during the Next.js build.
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
     if (oauthError) {
       setError(oauthError.message);
@@ -54,8 +55,8 @@ export function LoginForm({ configured }: { configured: boolean }) {
       </button>
       <div className="form-divider"><span>or use email</span></div>
       <label>
-        University email
-        <input name="email" type="email" autoComplete="email" placeholder="you@university.edu" required disabled={!configured} />
+        Email
+        <input name="email" type="email" autoComplete="email" placeholder="you@example.com" required disabled={!configured} />
       </label>
       <label>
         Password

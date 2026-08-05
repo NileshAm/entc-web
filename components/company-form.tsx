@@ -101,13 +101,23 @@ export function CompanyForm({ company }: { company?: Company }) {
           <input name="bidIncrement" type="number" min="1" required defaultValue={company?.bid_increment ?? 5} />
         </label>
         <label>
-          Maximum bid
+          Maximum bid (optional)
           <input
             name="maximumBid"
             type="number"
             min={company?.current_bid || 1}
             defaultValue={company?.maximum_bid ?? ""}
-            placeholder="Optional"
+          />
+        </label>
+        <label>
+          Withdrawal increase charge (%)
+          <input
+            name="withdrawalPenaltyPercent"
+            type="number"
+            min="0"
+            max="100"
+            required
+            defaultValue={company?.withdrawal_penalty_percent ?? 10}
           />
         </label>
         <label>
@@ -122,7 +132,7 @@ export function CompanyForm({ company }: { company?: Company }) {
       <p className="form-timezone-note">Schedule times use Sri Lanka time (UTC+05:30).</p>
       {company && company.status !== "upcoming" && (
         <p className="setup-notice">
-          This company has already entered the bidding process. Its current bid remains at {company.current_bid} points; use bid controls for increases.
+          This company has already entered the bidding process. Its committee-controlled current bid is {company.current_bid} points. Use the live dashboard to increase it and request Stay or Withdraw responses.
         </p>
       )}
       {state.message && <p className={state.ok ? "inline-success" : "inline-error"}>{state.message}</p>}

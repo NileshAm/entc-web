@@ -6,9 +6,9 @@ import { Logo } from "@/components/logo";
 import { SignupForm } from "@/components/signup-form";
 import { getCurrentProfile } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/env";
-import { normalizeUniversityDomain } from "@/lib/registration";
 
 export const metadata: Metadata = { title: "Create student account" };
+export const dynamic = "force-dynamic";
 
 export default async function SignupPage() {
   const configured = isSupabaseConfigured();
@@ -16,10 +16,6 @@ export default async function SignupPage() {
     const profile = await getCurrentProfile();
     if (profile) redirect("/dashboard");
   }
-
-  const domain = normalizeUniversityDomain(
-    process.env.NEXT_PUBLIC_UNIVERSITY_EMAIL_DOMAIN,
-  );
 
   return (
     <main className="auth-page">
@@ -29,10 +25,10 @@ export default async function SignupPage() {
           <div className="auth-story-copy">
             <div className="eyebrow light"><GraduationCap size={14} /> Student registration</div>
             <h1>Start your bidding journey.</h1>
-            <p>Create your verified student account and enter the internship process with a clear point balance.</p>
+            <p>Create your student account and enter the internship process with a clear point balance.</p>
             <ul>
               <li><CheckCircle2 /> Your student index stays linked to one account</li>
-              <li><CheckCircle2 /> University email verification protects access</li>
+              <li><CheckCircle2 /> Any valid email address is accepted</li>
               <li><CheckCircle2 /> New students begin with 100 bidding points</li>
             </ul>
           </div>
@@ -54,7 +50,7 @@ export default async function SignupPage() {
               Copy <code>.env.example</code> to <code>.env.local</code> and add your project credentials.
             </div>
           )}
-          <SignupForm configured={configured} domain={domain} />
+          <SignupForm configured={configured} />
           <p className="auth-switch">Already have an account? <Link href="/login">Sign in</Link></p>
         </div>
       </section>

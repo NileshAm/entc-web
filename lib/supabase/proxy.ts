@@ -26,7 +26,28 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  // getClaims validates the JWT signature and refreshes expired sessions.
-  await supabase.auth.getClaims();
+  try {
+    // getClaims validates the JWT signature and refreshes expired sessions.
+    const { error } = await supabase.auth.getClaims();
+    if (error) {
+      console.warn("auth.session_refresh_rejected", {
+        name: error.name,
+        code: error.code,
+      });
+    }
+  } catch (error) {
+    // A transient Auth/JWKS failure must not take down public pages. Protected
+    // routes still fail closed in requireProfile(). Never log cookie values.
+    console.error("auth.session_refresh_failed", {
+      name: error instanceof Error ? error.name : "UnknownError",
+    });
+    response.headers.set(
+      "Cache-Control",
+      "private, no-cache, no-store, must-revalidate, max-age=0",
+    );
+    response.headers.set("Expires", "0");
+    response.headers.set("Pragma", "no-cache");
+  }
+
   return response;
 }

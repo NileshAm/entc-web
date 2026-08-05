@@ -49,6 +49,7 @@ export interface Company {
   current_bid: number;
   bid_increment: number;
   maximum_bid: number | null;
+  withdrawal_penalty_percent: number;
   opens_at: string | null;
   closes_at: string | null;
   response_duration_minutes: number;
@@ -60,6 +61,12 @@ export interface Company {
   withdrawal_count: number;
   demand_ratio: number;
   application?: Application | null;
+  participants?: BidParticipant[];
+}
+
+export interface BidParticipant {
+  full_name: string;
+  response_state: "staying" | "pending";
 }
 
 export interface PublicCompanyAnalytics {
@@ -69,6 +76,7 @@ export interface PublicCompanyAnalytics {
   location: string;
   cv_requirement: number;
   current_bid: number;
+  maximum_bid: number | null;
   opens_at: string | null;
   closes_at: string | null;
   status: CompanyStatus;
@@ -84,8 +92,11 @@ export interface Application {
   accepted_bid: number;
   reserved_points: number;
   final_points_deducted: number;
+  withdrawal_charge: number;
+  bid_response_penalty_percent: number | null;
   status: ApplicationStatus;
   applied_at: string;
+  bid_updated_at: string;
   confirmation_deadline: string | null;
   confirmed_at: string | null;
   withdrawn_at: string | null;

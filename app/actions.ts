@@ -4,12 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
-import { getSiteUrl } from "@/lib/env";
-import {
-  isUniversityEmailAllowed,
-  normalizeUniversityDomain,
-  studentRegistrationSchema,
-} from "@/lib/registration";
+import { studentRegistrationSchema } from "@/lib/registration";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionState, CompanyStatus } from "@/lib/types";
 
@@ -32,23 +27,11 @@ export async function registerStudent(
     }
 
     const value = parsed.data;
-    const universityDomain = normalizeUniversityDomain(
-      process.env.NEXT_PUBLIC_UNIVERSITY_EMAIL_DOMAIN,
-    );
-    if (!isUniversityEmailAllowed(value.email, universityDomain)) {
-      return {
-        ok: false,
-        message: `Use your @${universityDomain} university email address.`,
-      };
-    }
-
     const supabase = await createClient();
-    const siteUrl = getSiteUrl().replace(/\/$/, "");
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email: value.email,
       password: value.password,
       options: {
-        emailRedirectTo: `${siteUrl}/auth/callback?next=/dashboard`,
         data: {
           full_name: value.fullName,
           registration_number: value.registrationNumber.toUpperCase(),
@@ -60,7 +43,7 @@ export async function registerStudent(
       if (error.message.toLowerCase().includes("database error saving new user")) {
         return {
           ok: false,
-          message: "That university email or student index is already registered.",
+          message: "That email or student index is already registered.",
         };
       }
       throw new Error(error.message);
@@ -68,9 +51,7 @@ export async function registerStudent(
 
     return {
       ok: true,
-      message: data.session
-        ? "Your student account is ready. Continue to sign in."
-        : "Check your university inbox and confirm your email before signing in.",
+      message: "Your student account is ready.",
     };
   } catch (error) {
     return resultFromError(error);
@@ -90,6 +71,7 @@ async function rpcAction(
     if (error) throw new Error(error.message);
     revalidatePath("/student", "layout");
     revalidatePath("/admin", "layout");
+    revalidatePath("/analytics");
     return { ok: true, message: successMessage };
   } catch (error) {
     return resultFromError(error);
@@ -101,7 +83,7 @@ export async function applyToCompany(companyId: string) {
     "student",
     "apply_to_company",
     { p_company_id: companyId },
-    "Application submitted. Your points are now reserved.",
+    "Application submitted. The current bid is now reserved.",
   );
 }
 
@@ -114,14 +96,14 @@ export async function withdrawApplication(applicationId: string) {
   );
 }
 
-export async function respondToBid(applicationId: string, accept: boolean) {
+export async function respondToBid(applicationId: string, stay: boolean) {
   return rpcAction(
     "student",
     "respond_to_bid_increase",
-    { p_application_id: applicationId, p_accept: accept },
-    accept
-      ? "New bid accepted and your reservation was updated."
-      : "Bid declined. Your application was withdrawn.",
+    { p_application_id: applicationId, p_accept: stay },
+    stay
+      ? "You are staying in the session at the new bid."
+      : "You withdrew from the session and the withdrawal charge was applied.",
   );
 }
 
@@ -139,15 +121,19 @@ export async function increaseCompanyBid(
   customBid?: number,
   reason?: string,
 ) {
+  if (customBid !== undefined && (!Number.isInteger(customBid) || customBid <= 0)) {
+    return { ok: false, message: "Enter a valid whole-number bid." };
+  }
+
   return rpcAction(
     "admin",
     "increase_company_bid",
     {
       p_company_id: companyId,
       p_custom_bid: customBid ?? null,
-      p_reason: reason ?? null,
+      p_reason: reason?.trim() || null,
     },
-    "Bid increased. Active applicants have been notified.",
+    "Bid increased. Students must now choose Stay or Withdraw.",
   );
 }
 
@@ -190,6 +176,7 @@ const companySchema = z.object({
   minimumBid: z.coerce.number().int().nonnegative(),
   bidIncrement: z.coerce.number().int().positive(),
   maximumBid: z.union([z.literal(""), z.coerce.number().int().positive()]),
+  withdrawalPenaltyPercent: z.coerce.number().int().min(0).max(100),
   opensAt: z.string(),
   closesAt: z.string(),
 });
@@ -219,6 +206,7 @@ function companyInputValues(value: z.infer<typeof companySchema>) {
     minimum_bid: value.minimumBid,
     bid_increment: value.bidIncrement,
     maximum_bid: value.maximumBid === "" ? null : value.maximumBid,
+    withdrawal_penalty_percent: value.withdrawalPenaltyPercent,
     opens_at: parseCompanyDateTime(value.opensAt),
     closes_at: parseCompanyDateTime(value.closesAt),
   };
@@ -235,6 +223,9 @@ export async function createCompany(
       return { ok: false, message: parsed.error.issues[0]?.message ?? "Check the company details." };
     }
     const value = parsed.data;
+    if (value.maximumBid !== "" && value.maximumBid < value.minimumBid) {
+      return { ok: false, message: "Maximum bid must be at least the minimum bid." };
+    }
     const companyValues = companyInputValues(value);
     if (companyValues.closes_at && companyValues.opens_at && companyValues.closes_at <= companyValues.opens_at) {
       return { ok: false, message: "Closing time must be after opening time." };
@@ -258,7 +249,12 @@ export async function createCompany(
       action: "company.created",
       entity_type: "company",
       entity_id: data.id,
-      new_value: { name: value.name, minimum_bid: value.minimumBid },
+      new_value: {
+        name: value.name,
+        minimum_bid: value.minimumBid,
+        bid_increment: value.bidIncrement,
+        withdrawal_penalty_percent: value.withdrawalPenaltyPercent,
+      },
     });
     revalidatePath("/admin", "layout");
     return { ok: true, message: `${value.name} was added as an upcoming company.` };
@@ -282,6 +278,9 @@ export async function updateCompany(
     }
 
     const value = parsed.data;
+    if (value.maximumBid !== "" && value.maximumBid < value.minimumBid) {
+      return { ok: false, message: "Maximum bid must be at least the minimum bid." };
+    }
     const companyValues = companyInputValues(value);
     if (companyValues.closes_at && companyValues.opens_at && companyValues.closes_at <= companyValues.opens_at) {
       return { ok: false, message: "Closing time must be after opening time." };
@@ -290,7 +289,7 @@ export async function updateCompany(
     const supabase = await createClient();
     const { data: existing, error: readError } = await supabase
       .from("companies")
-      .select("id,name,slug,status,current_bid,minimum_bid,cv_requirement,bid_increment,maximum_bid")
+      .select("id,name,slug,status,current_bid,minimum_bid,cv_requirement,bid_increment,maximum_bid,withdrawal_penalty_percent")
       .eq("id", value.companyId)
       .single();
     if (readError || !existing) throw new Error(readError?.message ?? "Company not found.");
@@ -333,6 +332,7 @@ export async function updateCompany(
         cv_requirement: existing.cv_requirement,
         bid_increment: existing.bid_increment,
         maximum_bid: existing.maximum_bid,
+        withdrawal_penalty_percent: existing.withdrawal_penalty_percent,
       },
       new_value: {
         name: value.name,
@@ -342,6 +342,7 @@ export async function updateCompany(
         cv_requirement: value.cvRequirement,
         bid_increment: value.bidIncrement,
         maximum_bid: companyValues.maximum_bid,
+        withdrawal_penalty_percent: companyValues.withdrawal_penalty_percent,
       },
     });
 

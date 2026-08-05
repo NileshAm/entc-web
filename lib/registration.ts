@@ -7,7 +7,7 @@ export const studentRegistrationSchema = z
       .trim()
       .min(2, "Enter your full name.")
       .max(100, "Full name must be 100 characters or fewer."),
-    email: z.string().trim().toLowerCase().email("Enter a valid university email."),
+    email: z.string().trim().toLowerCase().email("Enter a valid email."),
     registrationNumber: z
       .string()
       .trim()
@@ -30,12 +30,3 @@ export const studentRegistrationSchema = z
     message: "Passwords do not match.",
     path: ["confirmPassword"],
   });
-
-export function normalizeUniversityDomain(value: string | undefined) {
-  return value?.trim().replace(/^@+/, "").toLowerCase() ?? "";
-}
-
-export function isUniversityEmailAllowed(email: string, domain: string) {
-  if (!domain) return true;
-  return email.trim().toLowerCase().endsWith(`@${domain}`);
-}

@@ -8,6 +8,7 @@ const publicAnalyticsRowSchema = z.object({
   location: z.string(),
   cv_requirement: z.number().int().positive(),
   current_bid: z.number().int().nonnegative(),
+  maximum_bid: z.number().int().positive().nullable(),
   opens_at: z.string().nullable(),
   closes_at: z.string().nullable(),
   status: z.enum([
@@ -31,6 +32,7 @@ export function normalizePublicCompanyAnalytics(row: unknown): PublicCompanyAnal
     location: company.location,
     cv_requirement: company.cv_requirement,
     current_bid: company.current_bid,
+    maximum_bid: company.maximum_bid,
     opens_at: company.opens_at,
     closes_at: company.closes_at,
     status: company.status,

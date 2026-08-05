@@ -10,6 +10,7 @@ describe("public analytics DTO", () => {
       location: "Colombo",
       cv_requirement: 10,
       current_bid: 25,
+      maximum_bid: 80,
       opens_at: null,
       closes_at: null,
       status: "open",

@@ -18,6 +18,10 @@ import { Logo } from "@/components/logo";
 import { getCurrentProfile } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/env";
 
+// This route reads the request's Supabase session when auth is configured.
+// Keep it request-rendered even if a build runs before runtime bindings exist.
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   if (isSupabaseConfigured()) {
     const profile = await getCurrentProfile();
@@ -99,7 +103,7 @@ export default async function Home() {
             </div>
             <div className="preview-card preview-live-card">
               <span className="live-dot" />
-              <div><strong>Live update</strong><small>2 applicants just responded</small></div>
+              <div><strong>Live update</strong><small>2 students just raised their bids</small></div>
             </div>
           </div>
         </section>
@@ -129,14 +133,14 @@ export default async function Home() {
             <article>
               <div className="feature-icon peach"><Gavel /></div>
               <span>02</span>
-              <h3>Reserve your bid</h3>
-              <p>Apply with a clear point preview. The database prevents overspending.</p>
+              <h3>Reserve the current bid</h3>
+              <p>Apply at the committee-set amount with a clear point reservation preview.</p>
             </article>
             <article>
               <div className="feature-icon lilac"><BellRing /></div>
               <span>03</span>
               <h3>Respond in realtime</h3>
-              <p>Accept an increased bid or withdraw before the response timer expires.</p>
+              <p>When the committee increases the bid, choose Stay or Withdraw before the deadline.</p>
             </article>
             <article>
               <div className="feature-icon sky"><CheckCircle2 /></div>
