@@ -53,7 +53,7 @@ export function SignupForm({ configured }: { configured: boolean }) {
             placeholder="200012A"
             minLength={4}
             maxLength={30}
-            pattern="[A-Za-z0-9/_-]+"
+            pattern="(?:[A-Za-z0-9_]|/|-)+"
             title="Use letters, numbers, slashes, underscores or hyphens only"
             required
             disabled={!configured || pending}
