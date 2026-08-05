@@ -1,0 +1,7 @@
+# Safe local/CI configuration. Remote project credentials remain in GitHub
+# environment secrets and are never committed here.
+project_id = "internbid"
+
+[auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/callback"]
