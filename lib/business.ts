@@ -14,6 +14,13 @@ export function availablePoints(profile: {
   );
 }
 
+export function ipPointTotal(profile: {
+  initial_points: number;
+  point_adjustments: number;
+}) {
+  return profile.initial_points + profile.point_adjustments;
+}
+
 export function demandCategory(ratio: number) {
   if (ratio < 0.75) return "Low demand";
   if (ratio < 1) return "Moderate demand";

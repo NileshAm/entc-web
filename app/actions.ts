@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
 import { studentRegistrationSchema } from "@/lib/registration";
+import { parseStudentIpCsv } from "@/lib/student-ip-csv";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionState, CompanyStatus } from "@/lib/types";
 
@@ -219,6 +220,70 @@ export async function adjustStudentPoints(
     { p_student_id: studentId, p_amount: amount, p_reason: reason },
     "Student point balance updated.",
   );
+}
+
+export async function setStudentIpPoints(
+  studentId: string,
+  total: number,
+  reason: string,
+) {
+  if (!Number.isInteger(total) || total < 0 || total > 2_147_483_647) {
+    return { ok: false, message: "Enter a non-negative whole-number IP total." };
+  }
+
+  return rpcAction(
+    "admin",
+    "set_student_ip_points",
+    { p_student_id: studentId, p_total: total, p_reason: reason },
+    "Student IP point total updated.",
+  );
+}
+
+interface StudentIpImportSummary {
+  csv_rows: number;
+  matched: number;
+  defaulted: number;
+  ignored: number;
+  updated: number;
+}
+
+export async function importStudentIpPoints(
+  _previousState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    await requireProfile(["admin"]);
+
+    const upload = formData.get("file");
+    if (!upload || typeof upload === "string" || upload.size === 0) {
+      return { ok: false, message: "Choose a CSV file to import." };
+    }
+    if (!upload.name.toLowerCase().endsWith(".csv")) {
+      return { ok: false, message: "The selected file must use the .csv extension." };
+    }
+    if (upload.size > 500 * 1024) {
+      return { ok: false, message: "The CSV file must be 500 KB or smaller." };
+    }
+
+    const rows = parseStudentIpCsv(await upload.text());
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("import_student_ip_points", {
+      p_rows: rows,
+      p_default_total: 80,
+    });
+    if (error) throw new Error(error.message);
+
+    const summary = data as StudentIpImportSummary;
+    revalidatePath("/student", "layout");
+    revalidatePath("/admin", "layout");
+
+    return {
+      ok: true,
+      message: `Import complete: ${summary.updated} student${summary.updated === 1 ? "" : "s"} changed, ${summary.matched} matched by index, ${summary.defaulted} set to the 80-point default, and ${summary.ignored} unknown CSV row${summary.ignored === 1 ? " was" : "s were"} ignored.`,
+    };
+  } catch (error) {
+    return resultFromError(error);
+  }
 }
 
 const companySchema = z.object({

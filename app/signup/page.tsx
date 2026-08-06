@@ -29,7 +29,7 @@ export default async function SignupPage() {
             <ul>
               <li><CheckCircle2 /> Your student index stays linked to one account</li>
               <li><CheckCircle2 /> Any valid email address is accepted</li>
-              <li><CheckCircle2 /> New students begin with 100 bidding points</li>
+              <li><CheckCircle2 /> New students begin with 80 bidding points</li>
             </ul>
           </div>
           <div className="auth-security"><ShieldCheck /><span><strong>Passwords handled by Supabase Auth</strong>Credentials are never stored in the public profile table</span></div>

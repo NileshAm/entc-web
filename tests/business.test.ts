@@ -4,11 +4,16 @@ import {
   demandCategory,
   formatStatus,
   initials,
+  ipPointTotal,
   participantRankingLabel,
   participantStatusLabel,
 } from "../lib/business";
 
 describe("point balance rules", () => {
+  it("combines the base allocation and audited changes into the IP total", () => {
+    expect(ipPointTotal({ initial_points: 80, point_adjustments: 15 })).toBe(95);
+  });
+
   it("subtracts reserved and spent points after applying adjustments", () => {
     expect(
       availablePoints({

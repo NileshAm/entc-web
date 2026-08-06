@@ -19,7 +19,7 @@ InternBid is a mobile-friendly internship company bidding and CV allocation syst
 ## 1. Create the Supabase project
 
 1. Create a project in Supabase.
-2. Open the SQL editor and run the files in `supabase/migrations` in filename order, or link the Supabase CLI and run `supabase db push`. Existing installations must apply every migration newer than the latest entry in their migration history, through `202608060013_finalize_manual_bidding_at_deadline.sql`.
+2. Open the SQL editor and run the files in `supabase/migrations` in filename order, or link the Supabase CLI and run `supabase db push`. Existing installations must apply every migration newer than the latest entry in their migration history, through `202608060014_student_ip_points_import.sql`.
 3. If Google sign-in is enabled, open **Authentication → URL Configuration** and add:
    - `http://localhost:3000/auth/callback`
    - `https://your-production-domain/auth/callback`
@@ -32,7 +32,7 @@ InternBid is a mobile-friendly internship company bidding and CV allocation syst
    signup-verification message.
 5. For production private Broadcast channels, disable public channel access in **Realtime → Settings**.
 
-New Auth users automatically receive a student profile with 100 points. To make the first administrator, run this once after that person signs in:
+New Auth users automatically receive a student profile with 80 points. Administrators can import exact IP allocations from CSV on the student management page; site students missing from an import receive the 80-point default, while unknown CSV indexes are ignored. To make the first administrator, run this once after that person signs in:
 
 ```sql
 update public.profiles
