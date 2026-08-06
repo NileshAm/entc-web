@@ -28,7 +28,7 @@ export default async function SignupPage() {
             <p>Create your student account and enter the internship process with a clear point balance.</p>
             <ul>
               <li><CheckCircle2 /> Your student index stays linked to one account</li>
-              <li><CheckCircle2 /> Any valid email address is accepted</li>
+              <li><CheckCircle2 /> Registration requires your @uom.lk email</li>
               <li><CheckCircle2 /> New students begin with 80 bidding points</li>
             </ul>
           </div>

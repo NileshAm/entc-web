@@ -40,7 +40,7 @@ export async function registerStudent(
       options: {
         data: {
           full_name: value.fullName,
-          registration_number: value.registrationNumber.toUpperCase(),
+          registration_number: value.registrationNumber,
         },
       },
     });

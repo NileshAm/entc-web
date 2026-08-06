@@ -67,10 +67,14 @@ export function SignupForm({ configured }: { configured: boolean }) {
           type="email"
           inputMode="email"
           autoComplete="email"
-          placeholder="you@example.com"
+          placeholder="you@uom.lk"
           required
           disabled={!configured || pending}
+          aria-describedby="university-email-requirement"
         />
+        <small className="field-hint" id="university-email-requirement">
+          Use your University of Moratuwa @uom.lk email address.
+        </small>
       </label>
       <label>
         Password

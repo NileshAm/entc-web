@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+export const universityEmailDomain = "uom.lk";
+
+export function normalizeStudentIndex(value: string) {
+  return value.trim().toUpperCase();
+}
+
 export const studentRegistrationSchema = z
   .object({
     fullName: z
@@ -7,7 +13,15 @@ export const studentRegistrationSchema = z
       .trim()
       .min(2, "Enter your full name.")
       .max(100, "Full name must be 100 characters or fewer."),
-    email: z.string().trim().toLowerCase().email("Enter a valid email."),
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .email("Enter a valid email.")
+      .refine(
+        (value) => value.split("@")[1] === universityEmailDomain,
+        `Use your @${universityEmailDomain} university email address.`,
+      ),
     registrationNumber: z
       .string()
       .trim()
@@ -16,7 +30,8 @@ export const studentRegistrationSchema = z
       .regex(
         /^[a-zA-Z0-9/_-]+$/,
         "Student index can only contain letters, numbers, /, _ or -.",
-      ),
+      )
+      .transform(normalizeStudentIndex),
     password: z
       .string()
       .min(8, "Password must contain at least 8 characters.")

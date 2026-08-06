@@ -19,7 +19,7 @@ InternBid is a mobile-friendly internship company bidding and CV allocation syst
 ## 1. Create the Supabase project
 
 1. Create a project in Supabase.
-2. Open the SQL editor and run the files in `supabase/migrations` in filename order, or link the Supabase CLI and run `supabase db push`. Existing installations must apply every migration newer than the latest entry in their migration history, through `202608060015_company_csv_import.sql`.
+2. Open the SQL editor and run the files in `supabase/migrations` in filename order, or link the Supabase CLI and run `supabase db push`. Existing installations must apply every migration newer than the latest entry in their migration history, through `202608060016_uom_student_identity_constraints.sql`.
 3. If Google sign-in is enabled, open **Authentication → URL Configuration** and add:
    - `http://localhost:3000/auth/callback`
    - `https://your-production-domain/auth/callback`
@@ -37,7 +37,7 @@ New Auth users automatically receive a student profile with 80 points. Administr
 ```sql
 update public.profiles
 set role = 'admin'
-where email = 'committee.admin@university.edu';
+where email = 'committee.admin@uom.lk';
 ```
 
 Committee viewers use `role = 'viewer'`.
@@ -52,7 +52,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
-The sign-up page accepts any syntactically valid email and collects the student’s name, index, and password confirmation. Supabase Auth securely manages the password; the public profile stores no password or password hash.
+The sign-up page accepts only the exact `uom.lk` email domain and collects the student’s name, index, and password confirmation. Migration `202608060016_uom_student_identity_constraints.sql` applies the same restriction to direct Supabase Auth calls and stores student indexes in uppercase behind a case-insensitive unique index. It stops with a preflight error if an existing student email or index must be corrected first. Supabase Auth securely manages the password; the public profile stores no password or password hash.
 
 Local Supabase already uses immediate password registration through
 `auth.email.enable_confirmations = false` in `supabase/config.toml`.
