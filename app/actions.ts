@@ -2,8 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
+import {
+  companyInputValues,
+  companySchema,
+  companyUpdateSchema,
+} from "@/lib/company-validation";
+import { parseCompanyCsv } from "@/lib/company-csv";
 import { studentRegistrationSchema } from "@/lib/registration";
 import { parseStudentIpCsv } from "@/lib/student-ip-csv";
 import { createClient } from "@/lib/supabase/server";
@@ -286,65 +291,6 @@ export async function importStudentIpPoints(
   }
 }
 
-const companySchema = z.object({
-  name: z.string().trim().min(2).max(120),
-  slug: z
-    .string()
-    .trim()
-    .min(2)
-    .max(80)
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
-  industry: z.string().trim().min(2).max(100),
-  location: z.string().trim().min(2).max(120),
-  description: z.string().trim().max(2000),
-  roles: z.string().trim(),
-  skills: z.string().trim(),
-  cvRequirement: z.coerce.number().int().positive(),
-  minimumBid: z.coerce.number().int().nonnegative(),
-  bidIncrement: z.coerce.number().int().positive(),
-  maximumBid: z.union([z.literal(""), z.coerce.number().int().positive()]),
-  withdrawalPenaltyPercent: z.coerce.number().int().min(0).max(100),
-  responseDurationMinutes: z.coerce.number().int().min(1).max(1440),
-  biddingMode: z.enum(["committee", "automatic"]),
-  inactivityTimeoutSeconds: z.coerce.number().int().min(30).max(86400),
-  opensAt: z.string(),
-  closesAt: z.string(),
-});
-
-const companyUpdateSchema = companySchema.extend({
-  companyId: z.string().uuid("Invalid company reference."),
-});
-
-function parseCompanyDateTime(value: string) {
-  if (!value) return null;
-  const localValue = value.length === 16 ? `${value}:00` : value;
-  const timestamp = new Date(`${localValue}+05:30`);
-  if (Number.isNaN(timestamp.getTime())) throw new Error("Enter a valid company schedule.");
-  return timestamp.toISOString();
-}
-
-function companyInputValues(value: z.infer<typeof companySchema>) {
-  return {
-    name: value.name,
-    slug: value.slug,
-    industry: value.industry,
-    location: value.location,
-    description: value.description || null,
-    available_roles: value.roles.split(",").map((item) => item.trim()).filter(Boolean),
-    required_skills: value.skills.split(",").map((item) => item.trim()).filter(Boolean),
-    cv_requirement: value.cvRequirement,
-    minimum_bid: value.minimumBid,
-    bid_increment: value.bidIncrement,
-    maximum_bid: value.maximumBid === "" ? null : value.maximumBid,
-    withdrawal_penalty_percent: value.withdrawalPenaltyPercent,
-    response_duration_minutes: value.responseDurationMinutes,
-    bidding_mode: value.biddingMode,
-    inactivity_timeout_seconds: value.inactivityTimeoutSeconds,
-    opens_at: parseCompanyDateTime(value.opensAt),
-    closes_at: parseCompanyDateTime(value.closesAt),
-  };
-}
-
 export async function createCompany(
   _previousState: ActionState,
   formData: FormData,
@@ -394,6 +340,47 @@ export async function createCompany(
     });
     revalidatePath("/admin", "layout");
     return { ok: true, message: `${value.name} was added as an upcoming company.` };
+  } catch (error) {
+    return resultFromError(error);
+  }
+}
+
+export async function importCompanies(
+  _previousState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    await requireProfile(["admin"]);
+
+    const upload = formData.get("file");
+    if (!upload || typeof upload === "string" || upload.size === 0) {
+      return { ok: false, message: "Choose a company CSV file to import." };
+    }
+    if (!upload.name.toLowerCase().endsWith(".csv")) {
+      return { ok: false, message: "The selected file must use the .csv extension." };
+    }
+    if (upload.size > 500 * 1024) {
+      return { ok: false, message: "The CSV file must be 500 KB or smaller." };
+    }
+
+    const companies = parseCompanyCsv(await upload.text());
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("import_companies", {
+      p_companies: companies,
+    });
+    if (error?.code === "23505") {
+      return { ok: false, message: "A company URL slug in the CSV is already in use." };
+    }
+    if (error) throw new Error(error.message);
+
+    const summary = data as { created: number };
+    revalidatePath("/admin", "layout");
+    revalidatePath("/student", "layout");
+    revalidatePath("/analytics");
+    return {
+      ok: true,
+      message: `${summary.created} compan${summary.created === 1 ? "y was" : "ies were"} added as upcoming.`,
+    };
   } catch (error) {
     return resultFromError(error);
   }

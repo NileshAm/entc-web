@@ -33,7 +33,7 @@ export function StudentIpImport() {
   }
 
   return (
-    <section className="dashboard-section ip-import-section">
+    <section className="dashboard-section csv-import-section">
       <div className="form-section-title">
         <span><FileSpreadsheet /></span>
         <div>
@@ -42,13 +42,13 @@ export function StudentIpImport() {
         </div>
       </div>
 
-      <div className="ip-import-rules">
+      <div className="csv-import-rules">
         <span><strong>Matched index</strong>Uses the row’s <code>total</code>.</span>
         <span><strong>Missing from CSV</strong>Sets the site student to 80 points.</span>
         <span><strong>Unknown index</strong>Ignores the CSV row without changing data.</span>
       </div>
 
-      <form ref={formRef} action={action} className="ip-import-form">
+      <form ref={formRef} action={action} className="csv-import-form">
         <label className="csv-file-field">
           <Upload />
           <span>
@@ -63,7 +63,7 @@ export function StudentIpImport() {
             onChange={(event) => setFilename(event.target.files?.[0]?.name ?? "")}
           />
         </label>
-        <div className="ip-import-actions">
+        <div className="csv-import-actions">
           <button type="button" className="button button-ghost button-small" onClick={downloadTemplate}>
             <Download /> Download template
           </button>
@@ -78,7 +78,7 @@ export function StudentIpImport() {
           {state.message}
         </p>
       )}
-      <p className="ip-import-warning">
+      <p className="csv-import-warning">
         Imports are all-or-nothing. If a total is lower than points already reserved or spent, no student is changed.
       </p>
     </section>

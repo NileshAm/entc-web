@@ -10,7 +10,7 @@ InternBid is a mobile-friendly internship company bidding and CV allocation syst
 - Student, administrator, and read-only committee roles.
 - Responsive student portal with point balances, committee-round Stay or Withdraw responses, student-set automatic bids, live rankings, participant names, private notifications, and a point ledger.
 - Administrator control room where the committee chooses a bidding method per company, controls committee bid increases, monitors automatic auctions, closes/finalizes sessions, manages companies and student points, exports data, and reviews the audit log.
-- Admin-only company editing with audited changes to catalogue details, bid rules, and schedules.
+- Admin-only company editing and transactional CSV creation with audited changes to catalogue details, bid rules, and schedules.
 - A public `/analytics` page with realtime current bids, aggregate demand, and current applicant names with their bidding status. Emails, student indexes, points, and administrative data remain private.
 - PostgreSQL row-level security and locked, transactional RPCs for every point-changing bidding action.
 - Private Supabase Broadcast channels. Live events contain company metrics only; student identities are never broadcast to other students.
@@ -19,7 +19,7 @@ InternBid is a mobile-friendly internship company bidding and CV allocation syst
 ## 1. Create the Supabase project
 
 1. Create a project in Supabase.
-2. Open the SQL editor and run the files in `supabase/migrations` in filename order, or link the Supabase CLI and run `supabase db push`. Existing installations must apply every migration newer than the latest entry in their migration history, through `202608060014_student_ip_points_import.sql`.
+2. Open the SQL editor and run the files in `supabase/migrations` in filename order, or link the Supabase CLI and run `supabase db push`. Existing installations must apply every migration newer than the latest entry in their migration history, through `202608060015_company_csv_import.sql`.
 3. If Google sign-in is enabled, open **Authentication → URL Configuration** and add:
    - `http://localhost:3000/auth/callback`
    - `https://your-production-domain/auth/callback`
