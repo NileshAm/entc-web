@@ -114,7 +114,7 @@ export async function withdrawApplication(applicationId: string) {
     "student",
     "withdraw_application",
     { p_application_id: applicationId },
-    "Application withdrawn. Reserved points were released and any applicable withdrawal charge was applied.",
+    "Application withdrawn. The applicable base-bid and increase withdrawal charge was applied.",
   );
 }
 
@@ -196,6 +196,15 @@ export async function finalizeAutomaticBidding(companyId: string) {
     "finalize_automatic_bidding",
     { p_company_id: companyId },
     "Automatic bidding closed and the top bids were selected.",
+  );
+}
+
+export async function finishExpiredCommitteeBidding(companyId: string) {
+  return rpcAction(
+    "admin",
+    "finish_expired_committee_bidding",
+    { p_company_id: companyId },
+    "Manual bidding ended and the selected students were finalized.",
   );
 }
 

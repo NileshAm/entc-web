@@ -8,6 +8,7 @@ describe("public analytics DTO", () => {
       name: "Example Company",
       industry: "Software",
       location: "Colombo",
+      available_roles: ["Software Engineer", "QA Engineer"],
       cv_requirement: 10,
       current_bid: 25,
       maximum_bid: 80,
@@ -29,6 +30,7 @@ describe("public analytics DTO", () => {
     });
 
     expect(company.demand_ratio).toBe(1.5);
+    expect(company.available_roles).toEqual(["Software Engineer", "QA Engineer"]);
     expect(company.participants).toEqual([
       { full_name: "Nimal Perera", response_state: "staying", bid_amount: 45, rank_position: 1, is_currently_selected: true },
       { full_name: "Amara Silva", response_state: "pending", bid_amount: 40, rank_position: 2, is_currently_selected: true },

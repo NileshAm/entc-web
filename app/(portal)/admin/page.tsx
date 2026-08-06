@@ -5,6 +5,7 @@ import {
   CircleDollarSign,
   Gavel,
   Hourglass,
+  Trophy,
   Users,
   UserRoundCheck,
 } from "lucide-react";
@@ -12,12 +13,19 @@ import { AdminCompanyControls } from "@/components/admin-company-controls";
 import { CompanyAvatar } from "@/components/company-avatar";
 import { Countdown } from "@/components/countdown";
 import { CsvExport } from "@/components/csv-export";
+import { ManualRoundTimer } from "@/components/manual-round-timer";
 import { StatusBadge } from "@/components/status-badge";
 import { requireProfile } from "@/lib/auth";
-import { demandCategory, formatDateTime } from "@/lib/business";
+import { demandCategory, formatDateTime, formatStatus, initials } from "@/lib/business";
 import { getAdminData } from "@/lib/data";
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ results?: string | string[] }>;
+}) {
+  const query = await searchParams;
+  const resultCompanyId = typeof query.results === "string" ? query.results : null;
   const profile = await requireProfile(["admin", "viewer"]);
   const { companies, applications } = await getAdminData();
   const live = companies.find((company) =>
@@ -31,10 +39,10 @@ export default async function AdminPage() {
       new Date(right.bid_updated_at ?? right.applied_at).getTime() -
       new Date(left.bid_updated_at ?? left.applied_at).getTime(),
     );
-  const responseDeadline = active
+  const responseDeadline = live?.manual_round_deadline ?? active
     .filter((application) =>
       application.company_id === live?.id &&
-      application.status === "confirmation_required" &&
+      ["confirmation_required", "confirmed"].includes(application.status) &&
       application.confirmation_deadline,
     )
     .map((application) => application.confirmation_deadline as string)
@@ -43,6 +51,18 @@ export default async function AdminPage() {
         ? deadline
         : latest,
     null);
+  const resultCompany = resultCompanyId
+    ? companies.find((company) => company.id === resultCompanyId && company.status === "finalized")
+    : null;
+  const resultApplications = resultCompany
+    ? applications.filter((application) => application.company_id === resultCompany.id)
+    : [];
+  const selectedResults = resultApplications.filter((application) =>
+    ["selected", "finalized"].includes(application.status),
+  );
+  const otherResults = resultApplications.filter((application) =>
+    ["not_selected", "withdrawn"].includes(application.status),
+  );
   const applicantRows = active.map((application) => ({
     registration_number: application.profile?.registration_number ?? "",
     student: application.profile?.full_name ?? "",
@@ -70,25 +90,67 @@ export default async function AdminPage() {
         <article className="metric-card"><span className="metric-icon purple"><CircleDollarSign /></span><div><small>{live?.bidding_mode === "automatic" ? "HIGHEST BID" : "CURRENT BID"}</small><strong>{live?.current_bid ?? 0}</strong><p>{live?.bidding_mode === "automatic" ? "Submitted by students" : "Controlled by administrators"}</p></div></article>
       </section>
 
+      {resultCompany && (
+        <section className="round-results" id="manual-results" aria-labelledby="manual-results-title">
+          <header>
+            <span className="round-results-icon"><Trophy /></span>
+            <div>
+              <span className="page-kicker">BIDDING FINISHED</span>
+              <h2 id="manual-results-title">Selected students for {resultCompany.name}</h2>
+              <p>{selectedResults.length} of {resultCompany.cv_requirement} positions filled at {resultCompany.current_bid} points.</p>
+            </div>
+          </header>
+          <div className="round-results-grid">
+            <article className="round-result-group selected">
+              <div><strong>Selected students</strong><span>{selectedResults.length} selected</span></div>
+              {selectedResults.length ? (
+                <ul>
+                  {selectedResults.map((application) => (
+                    <li key={application.id}>
+                      <span className="participant-avatar" aria-hidden="true">{initials(application.profile?.full_name ?? "Student")}</span>
+                      <span><strong>{application.profile?.full_name ?? "Unknown student"}</strong><small>{application.profile?.registration_number ?? application.profile?.email} · {application.final_points_deducted || application.accepted_bid} pts</small></span>
+                      <b>Selected</b>
+                    </li>
+                  ))}
+                </ul>
+              ) : <p>No student qualified for a position.</p>}
+            </article>
+            <article className="round-result-group outcomes">
+              <div><strong>Other outcomes</strong><span>{otherResults.length} students</span></div>
+              {otherResults.length ? (
+                <ul>
+                  {otherResults.map((application) => (
+                    <li key={application.id}>
+                      <span className="participant-avatar" aria-hidden="true">{initials(application.profile?.full_name ?? "Student")}</span>
+                      <span><strong>{application.profile?.full_name ?? "Unknown student"}</strong><small>{application.profile?.registration_number ?? application.profile?.email} · {application.withdrawal_charge ? `${application.withdrawal_charge} pts charged` : "Reservation released"}</small></span>
+                      <b>{formatStatus(application.status)}</b>
+                    </li>
+                  ))}
+                </ul>
+              ) : <p>No withdrawn or non-selected students.</p>}
+            </article>
+          </div>
+        </section>
+      )}
+
       {live ? (
         <>
           {live.bidding_mode === "committee" && live.applicant_count > live.cv_requirement && (
             <div className="warning-banner"><AlertTriangle /><span><strong>Company is oversubscribed</strong>{live.applicant_count} students are staying for {live.cv_requirement} slots. An administrator can increase the bid.</span></div>
           )}
-          {live.bidding_mode === "committee" && live.pending_count > 0 && (
+          {live.bidding_mode === "committee" && responseDeadline && (
             <div className="warning-banner response-window-banner">
               <Hourglass />
               <span className="response-window-copy">
-                <strong>Responses required</strong>
-                {live.pending_count} students still need to choose Stay or Withdraw before this round can finish.
+                <strong>Manual bidding ends at zero</strong>
+                {live.pending_count > 0
+                  ? `${live.pending_count} students still need to choose Stay or Withdraw. `
+                  : "All students have responded. "}
+                The available positions will be selected and the company will be finalized automatically.
               </span>
-              {responseDeadline && (
-                <div className="response-window-timer">
-                  <small>RESPONSES CLOSE IN</small>
-                  <strong><Countdown deadline={responseDeadline} /></strong>
-                  <small>{formatDateTime(responseDeadline)}</small>
-                </div>
-              )}
+              {profile.role === "admin"
+                ? <ManualRoundTimer companyId={live.id} deadline={responseDeadline} />
+                : <div className="response-window-timer"><small>BIDDING ENDS IN</small><strong><Countdown deadline={responseDeadline} /></strong><small>{formatDateTime(responseDeadline)}</small></div>}
             </div>
           )}
           <section className="admin-live-card">

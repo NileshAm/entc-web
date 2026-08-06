@@ -19,7 +19,7 @@ InternBid is a mobile-friendly internship company bidding and CV allocation syst
 ## 1. Create the Supabase project
 
 1. Create a project in Supabase.
-2. Open the SQL editor and run the files in `supabase/migrations` in filename order, or link the Supabase CLI and run `supabase db push`. Existing installations must apply every migration newer than the latest entry in their migration history, including `202608050003_admin_controlled_bidding.sql`, `202608060001_public_bid_participants.sql`, `202608060002_dual_mode_automatic_bidding.sql`, and `202608060003_committee_response_timeouts.sql`.
+2. Open the SQL editor and run the files in `supabase/migrations` in filename order, or link the Supabase CLI and run `supabase db push`. Existing installations must apply every migration newer than the latest entry in their migration history, through `202608060013_finalize_manual_bidding_at_deadline.sql`.
 3. If Google sign-in is enabled, open **Authentication → URL Configuration** and add:
    - `http://localhost:3000/auth/callback`
    - `https://your-production-domain/auth/callback`
@@ -96,12 +96,11 @@ The committee selects the method while a company is still **Upcoming**. It is lo
 - Students apply at the company’s current bid and reserve that amount.
 - When a company is oversubscribed, an administrator enters the increment for that round on the fly. The configured increment only prefills the control, and the new current bid is previewed immediately.
 - Every participating student receives a private notification and must choose **Stay** or **Withdraw** before the response deadline.
-- Staying reserves the additional points. Withdrawing during an increase permanently charges the initial/base bid plus `ceil((current bid − initial bid) × withdrawal percentage)` and releases the previous reservation.
+- Staying reserves the additional points. Any manual self-withdrawal permanently charges the initial/base bid plus `ceil((current bid − initial bid) × withdrawal percentage)` and releases the previous reservation.
 - The percentage is configured per company and defaults to 10%. A charge is capped at the student’s usable points so the balance never becomes negative.
-- A normal withdrawal when no increase response is pending releases the reservation without this charge.
 - Authenticated students can see the names and response states of students currently in the session, plus applicant and available-slot counts. Emails, registration numbers, point balances, and administrator data are not exposed.
 
-The Stay/Withdraw deadline is configurable per company. Migration `202608060003_committee_response_timeouts.sql` schedules a 10-second `pg_cron` sweep that force-withdraws overdue responses through the same atomic penalty routine. If Cron is unavailable locally, schedule this function externally:
+The Stay/Withdraw deadline is configurable per company. Migration `202608060013_finalize_manual_bidding_at_deadline.sql` makes the deadline terminal: it force-withdraws overdue responses with the same penalty, selects students up to the CV requirement, releases non-selected reservations, and finalizes the company. The admin dashboard also starts this settlement at zero and opens the result list. A 10-second `pg_cron` sweep provides the server-side fallback. If Cron is unavailable locally, schedule this function externally:
 
 ```sql
 select public.process_expired_bid_responses();

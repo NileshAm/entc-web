@@ -1,3 +1,12 @@
+import type { ApplicationStatus } from "@/lib/types";
+
+export function withdrawalPenaltyApplies(
+  applicationStatus: ApplicationStatus | undefined,
+) {
+  return applicationStatus !== undefined
+    && ["active_bid", "confirmed", "confirmation_required"].includes(applicationStatus);
+}
+
 export function calculateIncreaseWithdrawalCharge({
   initialBid,
   currentBid,

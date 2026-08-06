@@ -55,6 +55,7 @@ export interface Company {
   inactivity_timeout_seconds: number;
   last_bid_at: string | null;
   auto_closes_at: string | null;
+  manual_round_deadline: string | null;
   opens_at: string | null;
   closes_at: string | null;
   response_duration_minutes: number;
@@ -89,6 +90,7 @@ export interface PublicCompanyAnalytics {
   name: string;
   industry: string;
   location: string;
+  available_roles: string[];
   cv_requirement: number;
   current_bid: number;
   maximum_bid: number | null;

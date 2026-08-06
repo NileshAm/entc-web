@@ -1,7 +1,39 @@
 import { describe, expect, it } from "vitest";
-import { calculateIncreaseWithdrawalCharge } from "../lib/bidding";
+import {
+  calculateIncreaseWithdrawalCharge,
+  withdrawalPenaltyApplies,
+} from "../lib/bidding";
+
+describe("withdrawal penalty applicability", () => {
+  it("charges a self-withdrawal while a manual decision is pending", () => {
+    expect(withdrawalPenaltyApplies("confirmation_required")).toBe(true);
+  });
+
+  it("charges an active or confirmed manual self-withdrawal", () => {
+    expect(withdrawalPenaltyApplies("active_bid")).toBe(true);
+    expect(withdrawalPenaltyApplies("confirmed")).toBe(true);
+  });
+
+  it("continues to charge automatic-bid withdrawals", () => {
+    expect(withdrawalPenaltyApplies("active_bid")).toBe(true);
+  });
+
+  it("does not calculate a new penalty after withdrawal is complete", () => {
+    expect(withdrawalPenaltyApplies("withdrawn")).toBe(false);
+  });
+});
 
 describe("increase withdrawal charge", () => {
+  it("shows the full base bid for a confirmed manual bid with no increase", () => {
+    expect(calculateIncreaseWithdrawalCharge({
+      initialBid: 25,
+      currentBid: 25,
+      penaltyPercent: 10,
+      availablePoints: 75,
+      reservedPoints: 25,
+    }).appliedCharge).toBe(25);
+  });
+
   it("charges the base bid plus the rounded-up percentage of the increase", () => {
     expect(calculateIncreaseWithdrawalCharge({
       initialBid: 10,

@@ -25,7 +25,10 @@ import {
 import { CompanyAvatar } from "@/components/company-avatar";
 import { Countdown } from "@/components/countdown";
 import { StatusBadge } from "@/components/status-badge";
-import { calculateIncreaseWithdrawalCharge } from "@/lib/bidding";
+import {
+  calculateIncreaseWithdrawalCharge,
+  withdrawalPenaltyApplies,
+} from "@/lib/bidding";
 import { demandCategory, formatStatus, participantRankingLabel } from "@/lib/business";
 import type { ActionState, Company } from "@/lib/types";
 
@@ -33,10 +36,12 @@ export function CompanyCard({
   company,
   availablePoints,
   featured = false,
+  showRoundResults = false,
 }: {
   company: Company;
   availablePoints: number;
   featured?: boolean;
+  showRoundResults?: boolean;
 }) {
   const router = useRouter();
   const [modal, setModal] = useState<"apply" | "bid" | "withdraw" | "response" | null>(null);
@@ -71,29 +76,28 @@ export function CompanyCard({
 
   useEffect(() => {
     if (isAutomatic
-      || application?.status !== "confirmation_required"
-      || !application.confirmation_deadline) return;
+      || showRoundResults
+      || !application?.confirmation_deadline
+      || !["confirmation_required", "confirmed"].includes(application.status)) return;
 
     const timeoutKey = `${application.id}:${application.confirmation_deadline}`;
-    const settleExpiredResponse = () => {
+    const showResultsWhenTimerEnds = () => {
       if (timeoutHandled.current === timeoutKey) return;
       timeoutHandled.current = timeoutKey;
       startTransition(async () => {
-        const result = await forceWithdrawExpiredResponse(application.id);
-        if (result.ok) {
-          router.replace("/student?forcedWithdrawal=1");
-        } else {
-          router.refresh();
+        if (application.status === "confirmation_required") {
+          await forceWithdrawExpiredResponse(application.id);
         }
+        router.replace(`/student/companies/${company.slug}?roundResults=1&timerExpired=1`);
       });
     };
     const delay = Math.max(
       0,
       new Date(application.confirmation_deadline).getTime() - Date.now(),
     );
-    const timer = window.setTimeout(settleExpiredResponse, delay);
+    const timer = window.setTimeout(showResultsWhenTimerEnds, delay);
     return () => window.clearTimeout(timer);
-  }, [application, isAutomatic, router]);
+  }, [application, company.slug, isAutomatic, router, showRoundResults]);
 
   const additionalPoints = Math.max(
     0,
@@ -123,7 +127,23 @@ export function CompanyCard({
   );
   const isEliminationRisk = hasActiveRanking && !selfParticipant?.is_currently_selected;
   const isSafe = hasActiveRanking && selfParticipant?.is_currently_selected;
-  const automaticWithdrawalIsFinal = isAutomatic && application?.status === "withdrawn";
+  const withdrawalCarriesPenalty = withdrawalPenaltyApplies(
+    application?.status,
+  );
+  const withdrawalCostNow = withdrawalCarriesPenalty
+    ? withdrawal.appliedCharge
+    : 0;
+  const showWithdrawalImpact = Boolean(
+    application && ["active_bid", "confirmed", "confirmation_required"].includes(application.status),
+  );
+  const inactiveApplication = Boolean(
+    application && ["withdrawn", "not_selected", "cancelled"].includes(application.status),
+  );
+  const hasPendingManualDecision = !isAutomatic
+    && application?.status === "confirmation_required";
+  const activeParticipantCount = company.participants?.filter((participant) =>
+    ["staying", "pending"].includes(participant.response_state)
+  ).length ?? company.applicant_count;
 
   function run(action: () => Promise<ActionState>) {
     setFeedback(null);
@@ -150,7 +170,7 @@ export function CompanyCard({
     !application || ["active_bid", "confirmed", "cancelled", "not_selected"].includes(application.status)
   );
   const canWithdraw = application
-    && ["active_bid", "confirmed"].includes(application.status)
+    && ["active_bid", "confirmed", "confirmation_required"].includes(application.status)
     && (isAutomatic
       ? company.status === "open"
       : !["finalized", "cancelled"].includes(company.status));
@@ -169,9 +189,15 @@ export function CompanyCard({
       <div className="company-tags">
         {company.available_roles.slice(0, 2).map((role) => <span key={role}>{role}</span>)}
       </div>
-      <div className="company-bid-row">
+      <div className={`company-bid-row ${showWithdrawalImpact ? "with-withdrawal" : ""}`}>
         <div><small>{isAutomatic ? "HIGHEST BID" : "CURRENT BID"}</small><strong>{company.current_bid} <span>pts</span></strong></div>
         <div><small>{isAutomatic ? "SELECTED POSITIONS" : "SLOTS AVAILABLE"}</small><strong>{isAutomatic ? company.cv_requirement : slotsAvailable}</strong></div>
+        {showWithdrawalImpact && (
+          <div className={`withdrawal-impact ${withdrawalCostNow > 0 ? "cost" : "free"}`}>
+            <small>LOSE IF YOU WITHDRAW NOW</small>
+            <strong>{withdrawalCostNow} <span>pts</span></strong>
+          </div>
+        )}
       </div>
       <div className="demand-track"><span className={company.demand_ratio > 1 ? "over" : ""} style={{ width: `${Math.min(100, company.demand_ratio * 100)}%` }} /></div>
       <p className="bid-ranking-note">
@@ -201,32 +227,35 @@ export function CompanyCard({
       )}
 
       {!isAutomatic && application?.status === "confirmation_required" && (
-        <div className="action-required-box">
-          <div><Clock3 size={17} /><span><strong>Choose Stay or Withdraw</strong><small>New bid: {company.current_bid} points · <Countdown deadline={application.confirmation_deadline!} /></small></span></div>
-          <button onClick={() => setModal("response")}>Respond now</button>
+        <div className="action-required-box" role="alert">
+          <div className="action-required-copy">
+            <span className="action-required-icon"><Clock3 /></span>
+            <span><strong>Action required: stay or withdraw</strong><small>Stay needs {additionalPoints} more points. Withdrawing now costs {withdrawal.appliedCharge} points.</small></span>
+          </div>
+          <div className="decision-timer"><small>RESPOND WITHIN</small><strong><Countdown deadline={application.confirmation_deadline!} /></strong></div>
+          <button className="button button-warning" onClick={() => setModal("response")}>Review choices</button>
         </div>
       )}
-      {application && application.status !== "confirmation_required" && !["withdrawn", "cancelled", "not_selected"].includes(application.status) && (
-        <div className={`application-inline-status ${isEliminationRisk ? "danger" : isSafe ? "safe" : ""}`}>
-          {isAutomatic ? <Trophy size={15} /> : <Check size={15} />}
-          {isAutomatic ? (
-            <>Your bid: <strong>{application.accepted_bid} pts</strong>{selfParticipant?.rank_position ? ` · Rank #${selfParticipant.rank_position}` : ""}{selfParticipant ? ` · ${selfParticipant.is_currently_selected ? "Inside top slots" : "Outside cutoff"}` : ""}</>
-          ) : (
-            <>Your application: <strong>{formatStatus(application.status)}</strong> · {application.reserved_points || application.final_points_deducted} pts</>
-          )}
-        </div>
-      )}
-      {automaticWithdrawalIsFinal && (
-        <div className="automatic-withdrawal-final" role="status">
-          <AlertTriangle />
-          <span><strong>Withdrawal is final</strong><small>Your withdrawal charge was deducted. You cannot place another bid for this company.</small></span>
+      {application && application.status !== "confirmation_required" && (
+        <div className={`application-inline-status ${inactiveApplication ? "inactive" : isEliminationRisk ? "danger" : isSafe ? "safe" : ""}`}>
+          {inactiveApplication ? <AlertTriangle size={17} /> : isAutomatic ? <Trophy size={17} /> : <Check size={17} />}
+          <span>
+            <small>YOUR STATUS</small>
+            {inactiveApplication ? (
+              <><strong>{formatStatus(application.status)}</strong>{application.status === "withdrawn" ? ` · ${application.withdrawal_charge} pts charged` : " · This bid is no longer active"}</>
+            ) : isAutomatic ? (
+              <><strong>{application.accepted_bid} pts bid</strong>{selfParticipant?.rank_position ? ` · Rank #${selfParticipant.rank_position}` : ""}{selfParticipant ? ` · ${selfParticipant.is_currently_selected ? "Inside top slots" : "Outside cutoff"}` : ""}</>
+            ) : (
+              <><strong>{formatStatus(application.status)}</strong> · {application.reserved_points || application.final_points_deducted} pts</>
+            )}
+          </span>
         </div>
       )}
 
       {company.participants && ["open", "paused", "bid_increase_pending", "closed", "finalized"].includes(company.status) && (
         <section className="participant-panel" aria-label={`${company.name} participants`}>
           <div className="participant-panel-head">
-            <span><strong>Applicant ranking</strong><small>{company.participants.length} applicants · {company.cv_requirement} slots</small></span>
+            <span><strong>Applicant ranking and outcomes</strong><small>{activeParticipantCount} active · {company.participants.length} total records · {company.cv_requirement} slots</small></span>
             <span className="slots-chip">{isAutomatic ? `Top ${company.cv_requirement}` : `${slotsAvailable} available`}</span>
           </div>
           {company.participants.length ? (
@@ -249,10 +278,12 @@ export function CompanyCard({
 
       {feedback && !modal && <p className={feedback.ok ? "inline-success" : "inline-error"} role="status">{feedback.message}</p>}
       <div className="company-card-actions">
-        <Link href={`/student/companies/${company.slug}`}>View details <ArrowRight size={15} /></Link>
-        {canApply && <button className="button button-primary button-small" onClick={() => setModal("apply")}>Apply now</button>}
-        {canAutomaticBid && <button className="button button-primary button-small" onClick={openAutomaticBid}>{hasActiveApplication ? "Increase bid" : "Place bid"}</button>}
-        {canWithdraw && <button className="button button-danger-ghost button-small" onClick={() => setModal("withdraw")}>Withdraw</button>}
+        <Link className="button button-ghost button-small details-action" href={`/student/companies/${company.slug}`}>View details <ArrowRight size={16} /></Link>
+        <div className="company-bid-actions">
+          {canApply && <button className="button button-primary button-small" onClick={() => setModal("apply")}>Apply now</button>}
+          {canAutomaticBid && <button className="button button-primary button-small" onClick={openAutomaticBid}>{hasActiveApplication ? "Increase bid" : "Place bid"}</button>}
+          {canWithdraw && <button className="button button-danger-ghost button-small" onClick={() => setModal("withdraw")}>Withdraw · {withdrawalCostNow} pts</button>}
+        </div>
       </div>
 
       {modal && (
@@ -316,12 +347,16 @@ export function CompanyCard({
               <>
                 <span className="modal-kicker">WITHDRAW APPLICATION</span>
                 <h2 id="modal-title">Withdraw from {company.name}?</h2>
-                {isAutomatic ? (
+                {withdrawalCarriesPenalty ? (
                   <>
-                    <p>Automatic-bid withdrawals charge your first bid plus {company.withdrawal_penalty_percent}% of the amount you increased it.</p>
+                    <p>{isAutomatic
+                      ? `Automatic-bid withdrawals charge your first bid plus ${company.withdrawal_penalty_percent}% of the amount you increased it.`
+                      : hasPendingManualDecision
+                        ? `A bid decision is pending. Self-withdrawal has the same charge as choosing Withdraw: your first bid plus ${application?.bid_response_penalty_percent ?? company.withdrawal_penalty_percent}% of the bid increase.`
+                        : `Manual self-withdrawal charges your first bid plus ${company.withdrawal_penalty_percent}% of any bid increase.`}</p>
                     <div className="point-preview">
                       <div><span>First bid</span><strong>{application?.initial_bid} pts</strong></div>
-                      <div><span>Current bid</span><strong>{application?.accepted_bid} pts</strong></div>
+                      <div><span>{isAutomatic ? "Your current bid" : "New company bid"}</span><strong>{isAutomatic ? application?.accepted_bid : company.current_bid} pts</strong></div>
                       <div className="point-preview-total"><span>Withdrawal charge</span><strong>{withdrawal.appliedCharge} pts</strong></div>
                     </div>
                   </>
@@ -329,7 +364,7 @@ export function CompanyCard({
                   <p>No bid increase response is pending, so your {application?.reserved_points} reserved points will be released without a withdrawal charge.</p>
                 )}
                 <button className="button button-danger modal-primary" disabled={pending} onClick={() => run(() => withdrawApplication(application!.id))}>
-                  {pending ? <LoaderCircle className="spin" /> : isAutomatic ? `Withdraw & pay ${withdrawal.appliedCharge}` : "Withdraw & release reservation"}
+                  {pending ? <LoaderCircle className="spin" /> : withdrawalCarriesPenalty ? `Withdraw & pay ${withdrawal.appliedCharge} pts` : "Withdraw & release reservation"}
                 </button>
               </>
             )}
