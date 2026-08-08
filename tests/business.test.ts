@@ -78,7 +78,17 @@ describe("display helpers", () => {
       bid_amount: 45,
       rank_position: null,
       is_currently_selected: false,
-    }, "automatic", 2)).toBe("45 pts · Withdrawn");
+    }, "automatic")).toBe("45 pts · Withdrawn");
+  });
+
+  it("does not mark active committee participants as inside or outside a cutoff", () => {
+    expect(participantRankingLabel({
+      full_name: "Nimal Perera",
+      response_state: "staying",
+      bid_amount: 45,
+      rank_position: 4,
+      is_currently_selected: false,
+    }, "committee")).toBe("45 pts reserved · Staying");
   });
 
   it("labels finalized selected and non-selected ranking outcomes", () => {
@@ -88,13 +98,13 @@ describe("display helpers", () => {
       bid_amount: 45,
       rank_position: 1,
       is_currently_selected: true,
-    }, "automatic", 1)).toBe("#1 · 45 pts · Selected");
+    }, "automatic")).toBe("#1 · 45 pts · Selected");
     expect(participantRankingLabel({
       full_name: "Amara Silva",
       response_state: "not_selected",
       bid_amount: 40,
       rank_position: 2,
       is_currently_selected: false,
-    }, "automatic", 1)).toBe("#2 · 40 pts · Not selected");
+    }, "automatic")).toBe("#2 · 40 pts · Not selected");
   });
 });

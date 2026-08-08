@@ -67,8 +67,17 @@ export interface Company {
   pending_count: number;
   withdrawal_count: number;
   demand_ratio: number;
+  last_manual_bid?: ManualBidHistory | null;
   application?: Application | null;
   participants?: BidParticipant[];
+}
+
+export interface ManualBidHistory {
+  id: string;
+  company_id: string;
+  previous_bid: number;
+  new_bid: number;
+  created_at: string;
 }
 
 export interface BidParticipant {

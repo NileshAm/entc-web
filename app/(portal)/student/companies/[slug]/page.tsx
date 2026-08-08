@@ -52,7 +52,7 @@ export default async function CompanyDetailsPage({
               {selectedParticipants.length ? (
                 <ul>
                   {selectedParticipants.map((participant, index) => (
-                    <li key={`${participant.full_name}-${index}`}><span className="participant-avatar">{participant.full_name.charAt(0).toUpperCase()}</span><span><strong>{participant.full_name}{participant.is_self ? " (You)" : ""}</strong><small>{participantRankingLabel(participant, company.bidding_mode, company.cv_requirement)}</small></span><b>Selected</b></li>
+                    <li key={`${participant.full_name}-${index}`}><span className="participant-avatar">{participant.full_name.charAt(0).toUpperCase()}</span><span><strong>{participant.full_name}{participant.is_self ? " (You)" : ""}</strong><small>{participantRankingLabel(participant, company.bidding_mode)}</small></span><b>Selected</b></li>
                   ))}
                 </ul>
               ) : <p>No student is currently inside the available positions.</p>}
@@ -62,7 +62,7 @@ export default async function CompanyDetailsPage({
               {otherParticipants.length ? (
                 <ul>
                   {otherParticipants.map((participant, index) => (
-                    <li key={`${participant.full_name}-${index}`}><span className="participant-avatar">{participant.full_name.charAt(0).toUpperCase()}</span><span><strong>{participant.full_name}{participant.is_self ? " (You)" : ""}</strong><small>{participantRankingLabel(participant, company.bidding_mode, company.cv_requirement)}</small></span><b>{participant.response_state === "withdrawn" ? "Withdrawn" : "Not selected"}</b></li>
+                    <li key={`${participant.full_name}-${index}`}><span className="participant-avatar">{participant.full_name.charAt(0).toUpperCase()}</span><span><strong>{participant.full_name}{participant.is_self ? " (You)" : ""}</strong><small>{participantRankingLabel(participant, company.bidding_mode)}</small></span><b>{participant.response_state === "withdrawn" ? "Withdrawn" : "Not selected"}</b></li>
                   ))}
                 </ul>
               ) : <p>No other outcomes in this round.</p>}

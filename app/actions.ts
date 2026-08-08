@@ -229,6 +229,18 @@ export async function increaseCompanyBid(
   );
 }
 
+export async function revertLastManualBid(companyId: string, reason?: string) {
+  return rpcAction(
+    "admin",
+    "revert_last_manual_bid",
+    {
+      p_company_id: companyId,
+      p_reason: reason?.trim() || null,
+    },
+    "Latest bid reverted. Point balances were restored and withdrawn students were re-added.",
+  );
+}
+
 export async function finalizeCompany(companyId: string) {
   return rpcAction(
     "admin",

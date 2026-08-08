@@ -57,7 +57,6 @@ export function participantStatusLabel(status: BidParticipant["response_state"])
 export function participantRankingLabel(
   participant: BidParticipant,
   biddingMode: BiddingMode,
-  cvRequirement: number,
 ) {
   const rank = participant.rank_position === null
     ? ""
@@ -70,16 +69,11 @@ export function participantRankingLabel(
     return `${rank}${bid} · ${participantStatusLabel(participant.response_state)}`;
   }
 
-  if (biddingMode === "automatic") {
-    return `${rank}${bid} · ${participant.is_currently_selected ? "Top slots" : "Outside cutoff"}`;
+  if (biddingMode === "committee") {
+    return `${bid} reserved · ${participantStatusLabel(participant.response_state)}`;
   }
 
-  const standing = participant.is_currently_selected
-    ? participantStatusLabel(participant.response_state)
-    : participant.rank_position === cvRequirement + 1
-      ? "Next to be removed"
-      : "Outside cutoff";
-  return `${rank}${bid} reserved · ${standing}`;
+  return `${rank}${bid} · ${participant.is_currently_selected ? "Top slots" : "Outside cutoff"}`;
 }
 
 export function formatDateTime(value: string | null) {

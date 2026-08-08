@@ -7,6 +7,7 @@ import type {
   AuditLog,
   BidParticipant,
   Company,
+  ManualBidHistory,
   Notification,
   PointTransaction,
   Profile,
@@ -30,6 +31,23 @@ function normalizeCompany(row: Record<string, unknown>): Company {
     auto_closes_at: (row.auto_closes_at as string | null | undefined) ?? null,
     demand_ratio: cvRequirement > 0 ? applicantCount / cvRequirement : 0,
   };
+}
+
+function attachLatestManualBids(
+  rows: Record<string, unknown>[],
+  historyRows: ManualBidHistory[],
+) {
+  const latestByCompany = new Map<string, ManualBidHistory>();
+  for (const history of historyRows) {
+    if (!latestByCompany.has(history.company_id)) {
+      latestByCompany.set(history.company_id, history);
+    }
+  }
+
+  return rows.map((row) => ({
+    ...normalizeCompany(row),
+    last_manual_bid: latestByCompany.get(String(row.id)) ?? null,
+  }));
 }
 
 type ServerSupabaseClient = Awaited<ReturnType<typeof createClient>>;
@@ -155,7 +173,7 @@ export async function getCompanyBySlug(slug: string, studentId: string) {
 
 export async function getAdminOverviewData() {
   const supabase = await createClient();
-  const [companiesResult, applicationsResult] = await Promise.all([
+  const [companiesResult, applicationsResult, bidHistoryResult] = await Promise.all([
     supabase.from("companies").select("*").order("updated_at", { ascending: false }),
     supabase
       .from("applications")
@@ -163,26 +181,46 @@ export async function getAdminOverviewData() {
         "*, company:companies(id,name,slug,logo_url,industry), profile:profiles(id,full_name,registration_number,email)",
       )
       .order("updated_at", { ascending: false }),
+    supabase
+      .from("bid_history")
+      .select("id,company_id,previous_bid,new_bid,created_at")
+      .is("reverted_at", null)
+      .order("created_at", { ascending: false }),
   ]);
 
   if (companiesResult.error) throw new Error(companiesResult.error.message);
   if (applicationsResult.error) throw new Error(applicationsResult.error.message);
+  if (bidHistoryResult.error) throw new Error(bidHistoryResult.error.message);
 
   return {
-    companies: (companiesResult.data ?? []).map(normalizeCompany),
+    companies: attachLatestManualBids(
+      companiesResult.data ?? [],
+      (bidHistoryResult.data ?? []) as ManualBidHistory[],
+    ),
     applications: (applicationsResult.data ?? []) as unknown as Application[],
   };
 }
 
 export async function getAdminCompanies() {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("companies")
-    .select("*")
-    .order("updated_at", { ascending: false });
+  const [companiesResult, bidHistoryResult] = await Promise.all([
+    supabase
+      .from("companies")
+      .select("*")
+      .order("updated_at", { ascending: false }),
+    supabase
+      .from("bid_history")
+      .select("id,company_id,previous_bid,new_bid,created_at")
+      .is("reverted_at", null)
+      .order("created_at", { ascending: false }),
+  ]);
 
-  if (error) throw new Error(error.message);
-  return (data ?? []).map(normalizeCompany);
+  if (companiesResult.error) throw new Error(companiesResult.error.message);
+  if (bidHistoryResult.error) throw new Error(bidHistoryResult.error.message);
+  return attachLatestManualBids(
+    companiesResult.data ?? [],
+    (bidHistoryResult.data ?? []) as ManualBidHistory[],
+  );
 }
 
 export async function getAdminStudents() {

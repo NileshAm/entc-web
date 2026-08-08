@@ -129,7 +129,8 @@ export function CompanyCard({
   );
   const slotsAvailable = Math.max(0, company.cv_requirement - company.applicant_count);
   const hasActiveRanking = Boolean(
-    selfParticipant
+    isAutomatic
+      && selfParticipant
       && application
       && ["active_bid", "confirmed", "confirmation_required"].includes(application.status)
       && ["open", "paused", "bid_increase_pending"].includes(company.status),
@@ -235,7 +236,7 @@ export function CompanyCard({
       {isEliminationRisk && (
         <div className="cutoff-alert danger" role="alert">
           <AlertTriangle />
-          <span><strong>You are about to be eliminated</strong><small>Your rank is outside the {company.cv_requirement} available slots. {isAutomatic ? "Increase your bid before the session ends" : "Respond to any pending bid increase before its timer ends"} to avoid a charged force withdrawal.</small></span>
+          <span><strong>You are about to be eliminated</strong><small>Your rank is outside the {company.cv_requirement} available slots. Increase your bid before the automatic session ends to avoid a charged force withdrawal.</small></span>
         </div>
       )}
       {isSafe && (
@@ -283,19 +284,19 @@ export function CompanyCard({
       {company.participants && ["registration_open", "open", "paused", "bid_increase_pending", "closed", "finalized"].includes(company.status) && (
         <section className="participant-panel" aria-label={`${company.name} participants`}>
           <div className="participant-panel-head">
-            <span><strong>{isRegistrationOpen ? "Pre-bidding registered cohort" : "Applicant ranking and outcomes"}</strong><small>{activeParticipantCount} active · {company.participants.length} total records · {company.cv_requirement} slots</small></span>
-            <span className="slots-chip">{isRegistrationOpen ? "Cohort forming" : isAutomatic ? `Top ${company.cv_requirement}` : `${slotsAvailable} available`}</span>
+            <span><strong>{isRegistrationOpen ? "Pre-bidding registered cohort" : isAutomatic ? "Applicant ranking and outcomes" : "Committee bidding participants"}</strong><small>{activeParticipantCount} active · {company.participants.length} total records · {company.cv_requirement} required</small></span>
+            <span className="slots-chip">{isRegistrationOpen ? "Cohort forming" : isAutomatic ? `Top ${company.cv_requirement}` : `Target ${company.cv_requirement}`}</span>
           </div>
           {company.participants.length ? (
             <ul className="participant-list">
               {company.participants.map((participant, index) => (
-                <li key={`${participant.full_name}-${index}`} className={participant.is_self ? `self ${["withdrawn", "not_selected"].includes(participant.response_state) ? "inactive" : participant.is_currently_selected ? "safe" : "at-risk"}` : ""}>
+                <li key={`${participant.full_name}-${index}`} className={participant.is_self ? `self ${["withdrawn", "not_selected"].includes(participant.response_state) ? "inactive" : isAutomatic ? participant.is_currently_selected ? "safe" : "at-risk" : ""}` : ""}>
                   <span className="participant-avatar" aria-hidden="true">{participant.full_name.charAt(0).toUpperCase()}</span>
                   <span>{participant.full_name}{participant.is_self ? " (You)" : ""}</span>
-                  <small className={["withdrawn", "not_selected", "selected", "finalized"].includes(participant.response_state) ? participant.response_state : participant.is_currently_selected ? participant.response_state : "pending"}>
+                  <small className={["withdrawn", "not_selected", "selected", "finalized"].includes(participant.response_state) ? participant.response_state : !isAutomatic || participant.is_currently_selected ? participant.response_state : "pending"}>
                     {isRegistrationOpen && participant.response_state !== "withdrawn"
                       ? `${participant.bid_amount} pts reserved · ${isAutomatic ? "Initial bid" : "Registered"}`
-                      : participantRankingLabel(participant, company.bidding_mode, company.cv_requirement)}
+                      : participantRankingLabel(participant, company.bidding_mode)}
                   </small>
                 </li>
               ))}

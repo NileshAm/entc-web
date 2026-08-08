@@ -8,6 +8,7 @@ import {
   LoaderCircle,
   LockKeyhole,
   Pencil,
+  RotateCcw,
   X,
   XCircle,
 } from "lucide-react";
@@ -18,6 +19,7 @@ import {
   finalizeAutomaticBidding,
   finalizeCompany,
   increaseCompanyBid,
+  revertLastManualBid,
 } from "@/app/actions";
 import type { ActionState, Company } from "@/lib/types";
 
@@ -29,7 +31,7 @@ export function AdminCompanyControls({
   compact?: boolean;
 }) {
   const router = useRouter();
-  const [dialog, setDialog] = useState<"increase" | "finalize" | "autoFinalize" | "cancel" | null>(null);
+  const [dialog, setDialog] = useState<"increase" | "revert" | "finalize" | "autoFinalize" | "cancel" | null>(null);
   const [incrementAmount, setIncrementAmount] = useState(company.bid_increment);
   const [feedback, setFeedback] = useState<ActionState | null>(null);
   const [pending, startTransition] = useTransition();
@@ -56,6 +58,15 @@ export function AdminCompanyControls({
     ));
   }
 
+  function handleRevert(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    run(() => revertLastManualBid(
+      company.id,
+      String(form.get("reason") ?? ""),
+    ));
+  }
+
   function openIncreaseDialog() {
     setIncrementAmount(Math.min(
       company.bid_increment,
@@ -72,6 +83,11 @@ export function AdminCompanyControls({
     company.applicant_count > company.cv_requirement &&
     company.pending_count === 0 &&
     (company.maximum_bid === null || company.current_bid < company.maximum_bid);
+  const canRevert = company.bidding_mode === "committee" &&
+    ["open", "paused", "bid_increase_pending"].includes(company.status) &&
+    company.last_manual_bid !== null &&
+    company.last_manual_bid !== undefined &&
+    company.last_manual_bid.new_bid === company.current_bid;
   const maximumIncrement = company.maximum_bid === null
     ? undefined
     : company.maximum_bid - company.current_bid;
@@ -116,6 +132,27 @@ export function AdminCompanyControls({
             <p className="target-warning">Withdrawing students pay their base bid plus {company.withdrawal_penalty_percent}% of the increase portion.</p>
             <button className="button button-warning modal-primary" disabled={pending || invalidIncrement}>
               {pending ? <LoaderCircle className="spin" /> : "Increase bid & request responses"}
+            </button>
+          </form>
+        )}
+
+        {dialog === "revert" && company.last_manual_bid && (
+          <form onSubmit={handleRevert}>
+            <span className="modal-kicker">REVERT LATEST MANUAL ROUND</span>
+            <h2>Revert {company.name} to {company.last_manual_bid.previous_bid} points?</h2>
+            <p>This cancels the latest response round. Accepted bid increases will be released, pending responses will be cleared, and students who withdrew during this round will be refunded and automatically re-added.</p>
+            <div className="point-preview">
+              <div><span>Current bid</span><strong>{company.last_manual_bid.new_bid} pts</strong></div>
+              <div><span>Reverted increase</span><strong>- {company.last_manual_bid.new_bid - company.last_manual_bid.previous_bid} pts</strong></div>
+              <div className="point-preview-total"><span>Restored bid</span><strong>{company.last_manual_bid.previous_bid} pts</strong></div>
+            </div>
+            <label className="field-label">
+              Reason (optional)
+              <textarea name="reason" rows={2} placeholder="Bid increase entered incorrectly" />
+            </label>
+            <p className="target-warning">The rollback is atomic. If a withdrawn student has since used the released points elsewhere, no changes will be made until enough points are available to restore their original reservation.</p>
+            <button className="button button-warning modal-primary" disabled={pending}>
+              {pending ? <LoaderCircle className="spin" /> : "Revert bid & restore students"}
             </button>
           </form>
         )}
@@ -193,6 +230,7 @@ export function AdminCompanyControls({
           {company.status === "open" && <button disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "paused"))}><CirclePause /> Pause</button>}
           {company.status === "paused" && <button disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "open"))}><CirclePlay /> Resume</button>}
           {canIncrease && <button disabled={pending} onClick={openIncreaseDialog}><Gavel /> Increase bid</button>}
+          {canRevert && <button disabled={pending} onClick={() => setDialog("revert")}><RotateCcw /> Revert bid</button>}
           {["open", "paused"].includes(company.status) && <button disabled={pending || company.pending_count > 0 || company.applicant_count > company.cv_requirement} onClick={() => run(() => changeCompanyStatus(company.id, "closed"))}><LockKeyhole /> Close</button>}
           {company.status === "closed" && <button disabled={pending || company.pending_count > 0 || company.applicant_count > company.cv_requirement} onClick={() => setDialog("finalize")}><LockKeyhole /> Finalize</button>}
           <Link href={`/admin/companies/${company.id}/edit`} aria-label={`Edit ${company.name}`}><Pencil /> Edit</Link>
@@ -224,16 +262,23 @@ export function AdminCompanyControls({
           <>
             <button className="button button-ghost" disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "paused"))}><CirclePause size={17} /> Pause</button>
             <button className="button button-warning" disabled={pending || !canIncrease} onClick={openIncreaseDialog}><Gavel size={17} /> Increase bid</button>
+            {canRevert && <button className="button button-ghost" disabled={pending} onClick={() => setDialog("revert")}><RotateCcw size={17} /> Revert last bid</button>}
             <button className="button button-ghost" disabled={pending || company.pending_count > 0 || company.applicant_count > company.cv_requirement} onClick={() => run(() => changeCompanyStatus(company.id, "closed"))}><LockKeyhole size={17} /> Close</button>
           </>
         )}
         {company.bidding_mode === "committee" && company.status === "paused" && (
           <>
             <button className="button button-primary" disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "open"))}><CirclePlay size={17} /> Resume</button>
+            {canRevert && <button className="button button-ghost" disabled={pending} onClick={() => setDialog("revert")}><RotateCcw size={17} /> Revert last bid</button>}
             <button className="button button-ghost" disabled={pending || company.pending_count > 0 || company.applicant_count > company.cv_requirement} onClick={() => run(() => changeCompanyStatus(company.id, "closed"))}><LockKeyhole size={17} /> Close</button>
           </>
         )}
-        {company.bidding_mode === "committee" && company.status === "bid_increase_pending" && <span className="control-progress"><LoaderCircle className="spin" size={16} /> Waiting for {company.pending_count} student responses</span>}
+        {company.bidding_mode === "committee" && company.status === "bid_increase_pending" && (
+          <>
+            <span className="control-progress"><LoaderCircle className="spin" size={16} /> Waiting for {company.pending_count} student responses</span>
+            {canRevert && <button className="button button-ghost" disabled={pending} onClick={() => setDialog("revert")}><RotateCcw size={17} /> Revert last bid</button>}
+          </>
+        )}
         {company.bidding_mode === "committee" && company.status === "closed" && <button className="button button-dark" disabled={pending || company.pending_count > 0 || company.applicant_count > company.cv_requirement} onClick={() => setDialog("finalize")}><LockKeyhole size={17} /> Finalize</button>}
         {!["finalized", "cancelled"].includes(company.status) && <button className="button button-danger-ghost" disabled={pending} onClick={() => setDialog("cancel")}><XCircle size={17} /> Cancel</button>}
       </div>

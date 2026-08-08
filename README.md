@@ -99,6 +99,7 @@ Every company follows `Upcoming → Registration Open → Open`. During **Regist
 - When a company is oversubscribed, an administrator enters the increment for that round on the fly. The configured increment only prefills the control, and the new current bid is previewed immediately.
 - Every participating student receives a private notification and must choose **Stay** or **Withdraw** before the response deadline.
 - Staying reserves the additional points. A manual self-withdrawal after bidding starts permanently charges the initial/base bid plus `ceil((current bid − initial bid) × withdrawal percentage)` and releases the previous reservation. Registration-phase withdrawals are free.
+- Administrators can revert the latest active manual bid round. The rollback restores the previous bid and reservations, clears pending responses, refunds that round's withdrawal charges, and automatically re-adds students who withdrew after the reverted increase. The entire rollback fails safely if a released balance has since been committed elsewhere and cannot be re-reserved.
 - The percentage is configured per company and defaults to 10%. A charge is capped at the student’s usable points so the balance never becomes negative.
 - Authenticated students can see the names and response states of students currently in the session, plus applicant and available-slot counts. Emails, registration numbers, point balances, and administrator data are not exposed.
 

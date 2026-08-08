@@ -35,10 +35,14 @@ const completedParticipantStates: BidParticipant["response_state"][] = [
   "finalized",
 ];
 
-function participantTone(participant: BidParticipant) {
+function participantTone(
+  participant: BidParticipant,
+  biddingMode: PublicCompanyAnalytics["bidding_mode"],
+) {
   if (completedParticipantStates.includes(participant.response_state)) {
     return participant.response_state;
   }
+  if (biddingMode === "committee") return participant.response_state;
   return participant.is_currently_selected ? participant.response_state : "pending";
 }
 
@@ -168,8 +172,8 @@ export default async function PublicAnalyticsPage() {
                           className={completedParticipantStates.includes(participant.response_state) ? "inactive" : ""}
                         >
                           <span className="participant-avatar" aria-hidden="true">{participant.full_name.charAt(0).toUpperCase()}</span>
-                          <span><strong>{participant.full_name}</strong><small>{participantRankingLabel(participant, liveCompany.bidding_mode, liveCompany.cv_requirement)}</small></span>
-                          <b className={participantTone(participant)}>{participant.response_state === "pending" ? "Responding" : participant.response_state.replaceAll("_", " ")}</b>
+                          <span><strong>{participant.full_name}</strong><small>{participantRankingLabel(participant, liveCompany.bidding_mode)}</small></span>
+                          <b className={participantTone(participant, liveCompany.bidding_mode)}>{participant.response_state === "pending" ? "Responding" : participant.response_state.replaceAll("_", " ")}</b>
                         </li>
                       ))}
                     </ul>
@@ -278,10 +282,10 @@ export default async function PublicAnalyticsPage() {
                             <li key={`${participant.full_name}-${index}`} className={completedParticipantStates.includes(participant.response_state) ? "inactive" : ""}>
                               <span className="participant-avatar" aria-hidden="true">{participant.full_name.charAt(0).toUpperCase()}</span>
                               <span>{participant.full_name}</span>
-                              <small className={participantTone(participant)}>
+                              <small className={participantTone(participant, company.bidding_mode)}>
                                 {company.status === "registration_open" && participant.response_state !== "withdrawn"
                                   ? `${participant.bid_amount} pts reserved · ${company.bidding_mode === "automatic" ? "Initial bid" : "Registered"}`
-                                  : participantRankingLabel(participant, company.bidding_mode, company.cv_requirement)}
+                                  : participantRankingLabel(participant, company.bidding_mode)}
                               </small>
                             </li>
                           ))}
