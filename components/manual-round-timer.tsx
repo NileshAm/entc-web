@@ -39,7 +39,7 @@ export function ManualRoundTimer({
           }
           return;
         }
-        router.replace(`/admin?results=${companyId}#manual-results`);
+        router.replace(`/admin?results=${companyId}#finalized-outcomes`);
       });
     };
 

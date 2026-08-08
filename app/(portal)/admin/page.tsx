@@ -9,6 +9,7 @@ import {
   Users,
   UserRoundCheck,
 } from "lucide-react";
+import Link from "next/link";
 import { AdminCompanyControls } from "@/components/admin-company-controls";
 import { CompanyAvatar } from "@/components/company-avatar";
 import { Countdown } from "@/components/countdown";
@@ -51,18 +52,48 @@ export default async function AdminPage({
         ? deadline
         : latest,
     null);
-  const resultCompany = resultCompanyId
-    ? companies.find((company) => company.id === resultCompanyId && company.status === "finalized")
-    : null;
+  const finalizedCompanies = companies
+    .filter((company) => company.status === "finalized")
+    .sort((left, right) =>
+      new Date(right.finalized_at ?? 0).getTime() -
+      new Date(left.finalized_at ?? 0).getTime(),
+    );
+  const resultCompany = finalizedCompanies.find((company) => company.id === resultCompanyId)
+    ?? finalizedCompanies[0]
+    ?? null;
   const resultApplications = resultCompany
     ? applications.filter((application) => application.company_id === resultCompany.id)
     : [];
   const selectedResults = resultApplications.filter((application) =>
     ["selected", "finalized"].includes(application.status),
   );
-  const otherResults = resultApplications.filter((application) =>
-    ["not_selected", "withdrawn"].includes(application.status),
+  const withdrawnResults = resultApplications.filter((application) =>
+    application.status === "withdrawn",
   );
+  const notSelectedResults = resultApplications.filter((application) =>
+    application.status === "not_selected",
+  );
+  const outcomeRows = resultApplications
+    .filter((application) =>
+      ["selected", "finalized", "withdrawn", "not_selected"].includes(application.status),
+    )
+    .map((application) => ({
+      company: resultCompany?.name ?? "",
+      bidding_method: resultCompany?.bidding_mode === "automatic" ? "Automatic" : "Committee",
+      company_finalized_at: resultCompany?.finalized_at ?? "",
+      registration_number: application.profile?.registration_number ?? "",
+      student: application.profile?.full_name ?? "",
+      email: application.profile?.email ?? "",
+      outcome: ["selected", "finalized"].includes(application.status)
+        ? "Selected"
+        : formatStatus(application.status),
+      initial_bid: application.initial_bid,
+      accepted_bid: application.accepted_bid,
+      points_deducted: application.final_points_deducted,
+      withdrawal_charge: application.withdrawal_charge,
+      withdrawn_at: application.withdrawn_at ?? "",
+      application_finalized_at: application.finalized_at ?? "",
+    }));
   const applicantRows = active.map((application) => ({
     registration_number: application.profile?.registration_number ?? "",
     student: application.profile?.full_name ?? "",
@@ -91,16 +122,33 @@ export default async function AdminPage({
       </section>
 
       {resultCompany && (
-        <section className="round-results" id="manual-results" aria-labelledby="manual-results-title">
+        <section className="round-results" id="finalized-outcomes" aria-labelledby="finalized-outcomes-title">
           <header>
             <span className="round-results-icon"><Trophy /></span>
             <div>
-              <span className="page-kicker">BIDDING FINISHED</span>
-              <h2 id="manual-results-title">Selected students for {resultCompany.name}</h2>
-              <p>{selectedResults.length} of {resultCompany.cv_requirement} positions filled at {resultCompany.current_bid} points.</p>
+              <span className="page-kicker">FINALIZED OUTCOME MONITOR</span>
+              <h2 id="finalized-outcomes-title">Selected students for {resultCompany.name}</h2>
+              <p>{selectedResults.length} of {resultCompany.cv_requirement} positions filled · {withdrawnResults.length} withdrawn · Finalized {formatDateTime(resultCompany.finalized_at)}</p>
             </div>
+            <CsvExport
+              filename={`${resultCompany.slug}-finalized-outcomes`}
+              rows={outcomeRows}
+              label="Download outcomes"
+            />
           </header>
-          <div className="round-results-grid">
+          <nav className="outcome-company-tabs" aria-label="Finalized companies">
+            {finalizedCompanies.map((company) => (
+              <Link
+                key={company.id}
+                href={`/admin?results=${company.id}#finalized-outcomes`}
+                aria-current={company.id === resultCompany.id ? "page" : undefined}
+              >
+                <span>{company.name}</span>
+                <small>{formatDateTime(company.finalized_at)}</small>
+              </Link>
+            ))}
+          </nav>
+          <div className="round-results-grid admin-outcome-grid">
             <article className="round-result-group selected">
               <div><strong>Selected students</strong><span>{selectedResults.length} selected</span></div>
               {selectedResults.length ? (
@@ -116,19 +164,33 @@ export default async function AdminPage({
               ) : <p>No student qualified for a position.</p>}
             </article>
             <article className="round-result-group outcomes">
-              <div><strong>Other outcomes</strong><span>{otherResults.length} students</span></div>
-              {otherResults.length ? (
+              <div><strong>Withdrawn students</strong><span>{withdrawnResults.length} withdrawn</span></div>
+              {withdrawnResults.length ? (
                 <ul>
-                  {otherResults.map((application) => (
+                  {withdrawnResults.map((application) => (
                     <li key={application.id}>
                       <span className="participant-avatar" aria-hidden="true">{initials(application.profile?.full_name ?? "Student")}</span>
                       <span><strong>{application.profile?.full_name ?? "Unknown student"}</strong><small>{application.profile?.registration_number ?? application.profile?.email} · {application.withdrawal_charge ? `${application.withdrawal_charge} pts charged` : "Reservation released"}</small></span>
-                      <b>{formatStatus(application.status)}</b>
+                      <b>Withdrawn</b>
                     </li>
                   ))}
                 </ul>
-              ) : <p>No withdrawn or non-selected students.</p>}
+              ) : <p>No students withdrew from this company.</p>}
             </article>
+            {notSelectedResults.length > 0 && (
+              <article className="round-result-group outcomes">
+                <div><strong>Not selected</strong><span>{notSelectedResults.length} students</span></div>
+                <ul>
+                  {notSelectedResults.map((application) => (
+                    <li key={application.id}>
+                      <span className="participant-avatar" aria-hidden="true">{initials(application.profile?.full_name ?? "Student")}</span>
+                      <span><strong>{application.profile?.full_name ?? "Unknown student"}</strong><small>{application.profile?.registration_number ?? application.profile?.email} · {application.accepted_bid} pt bid · Reservation released</small></span>
+                      <b>Not selected</b>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            )}
           </div>
         </section>
       )}

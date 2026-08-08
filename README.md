@@ -9,7 +9,7 @@ InternBid is a mobile-friendly internship company bidding and CV allocation syst
 - Supabase email/password authentication with SSR cookies.
 - Student, administrator, and read-only committee roles.
 - Responsive student portal with pre-bidding registration, point balances, committee-round Stay or Withdraw responses, student-set automatic bids, live rankings, participant names, private notifications, and a point ledger.
-- Administrator control room where the committee chooses a bidding method per company, controls committee bid increases, monitors automatic auctions, closes/finalizes sessions, manages companies and student points, exports data, and reviews the audit log.
+- Administrator control room where the committee chooses a bidding method per company, controls committee bid increases, monitors automatic auctions, closes/finalizes sessions, reviews persistent selected/withdrawn outcomes for every finalized company, downloads outcome CSVs, manages companies and student points, and reviews the audit log.
 - Admin-only company editing and transactional CSV creation with audited changes to catalogue details, bid rules, and schedules.
 - A public `/analytics` page with realtime current bids, aggregate demand, and current applicant names with their bidding status. Emails, student indexes, points, and administrative data remain private.
 - PostgreSQL row-level security and locked, transactional RPCs for every point-changing bidding action.

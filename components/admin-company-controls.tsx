@@ -9,6 +9,7 @@ import {
   LockKeyhole,
   Pencil,
   RotateCcw,
+  Trophy,
   X,
   XCircle,
 } from "lucide-react";
@@ -215,6 +216,7 @@ export function AdminCompanyControls({
             {company.status === "open" && <button disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "paused"))}><CirclePause /> Pause</button>}
             {company.status === "paused" && <button disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "open"))}><CirclePlay /> Resume</button>}
             {["open", "paused"].includes(company.status) && <button disabled={pending} onClick={() => setDialog("autoFinalize")}><LockKeyhole /> Close now</button>}
+            {company.status === "finalized" && <Link href={`/admin?results=${company.id}#finalized-outcomes`}><Trophy /> Outcomes</Link>}
             <Link href={`/admin/companies/${company.id}/edit`} aria-label={`Edit ${company.name}`}><Pencil /> Edit</Link>
           </div>
           {feedback && !dialog && <p className={feedback.ok ? "inline-success" : "inline-error"}>{feedback.message}</p>}
@@ -233,6 +235,7 @@ export function AdminCompanyControls({
           {canRevert && <button disabled={pending} onClick={() => setDialog("revert")}><RotateCcw /> Revert bid</button>}
           {["open", "paused"].includes(company.status) && <button disabled={pending || company.pending_count > 0 || company.applicant_count > company.cv_requirement} onClick={() => run(() => changeCompanyStatus(company.id, "closed"))}><LockKeyhole /> Close</button>}
           {company.status === "closed" && <button disabled={pending || company.pending_count > 0 || company.applicant_count > company.cv_requirement} onClick={() => setDialog("finalize")}><LockKeyhole /> Finalize</button>}
+          {company.status === "finalized" && <Link href={`/admin?results=${company.id}#finalized-outcomes`}><Trophy /> Outcomes</Link>}
           <Link href={`/admin/companies/${company.id}/edit`} aria-label={`Edit ${company.name}`}><Pencil /> Edit</Link>
         </div>
         {feedback && !dialog && <p className={feedback.ok ? "inline-success" : "inline-error"}>{feedback.message}</p>}
