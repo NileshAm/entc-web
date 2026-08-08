@@ -1,21 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, GraduationCap, ShieldCheck } from "lucide-react";
-import { redirect } from "next/navigation";
 import { Logo } from "@/components/logo";
 import { SignupForm } from "@/components/signup-form";
-import { getCurrentProfile } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Create student account" };
-export const dynamic = "force-dynamic";
+export const dynamic = "force-static";
 
-export default async function SignupPage() {
+export default function SignupPage() {
   const configured = isSupabaseConfigured();
-  if (configured) {
-    const profile = await getCurrentProfile();
-    if (profile) redirect("/dashboard");
-  }
 
   return (
     <main className="auth-page">

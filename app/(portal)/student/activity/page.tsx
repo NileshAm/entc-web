@@ -3,13 +3,13 @@ import { ArrowDownLeft, ArrowUpRight, Coins, Gavel } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
 import { availablePoints, formatDateTime } from "@/lib/business";
 import { requireProfile } from "@/lib/auth";
-import { getStudentData } from "@/lib/data";
+import { getStudentActivityData } from "@/lib/data";
 
 export const metadata: Metadata = { title: "My activity" };
 
 export default async function ActivityPage() {
-  const current = await requireProfile(["student"]);
-  const { profile, applications, transactions } = await getStudentData(current.id);
+  const profile = await requireProfile(["student"]);
+  const { applications, transactions } = await getStudentActivityData(profile.id);
   return (
     <div className="dashboard-page">
       <div className="page-title-row"><div><span className="page-kicker">MY ACTIVITY</span><h1>Every bid. Every point.</h1><p>Your complete application and point transaction history.</p></div><div className="balance-pill"><span>Current available balance</span><strong>{availablePoints(profile)} points</strong></div></div>

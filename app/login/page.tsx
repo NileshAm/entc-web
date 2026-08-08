@@ -1,20 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Radio, ShieldCheck } from "lucide-react";
-import { redirect } from "next/navigation";
 import { Logo } from "@/components/logo";
 import { LoginForm } from "@/components/login-form";
-import { getCurrentProfile } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Sign in" };
-export const dynamic = "force-dynamic";
+export const dynamic = "force-static";
 
-export default async function LoginPage() {
-  if (isSupabaseConfigured()) {
-    const profile = await getCurrentProfile();
-    if (profile) redirect("/dashboard");
-  }
+export default function LoginPage() {
+  const configured = isSupabaseConfigured();
 
   return (
     <main className="auth-page">
@@ -43,13 +38,13 @@ export default async function LoginPage() {
             <h2>Sign in to InternBid</h2>
             <p>Use your email and password to continue.</p>
           </div>
-          {!isSupabaseConfigured() && (
+          {!configured && (
             <div className="setup-notice">
               <strong>Supabase setup required</strong>
               Copy <code>.env.example</code> to <code>.env.local</code> and add your project credentials.
             </div>
           )}
-          <LoginForm configured={isSupabaseConfigured()} />
+          <LoginForm configured={configured} />
           <p className="auth-switch">New to InternBid? <Link href="/signup">Create your student account</Link></p>
           <p className="auth-help">Can’t access your account? Contact the internship bidding committee.</p>
         </div>

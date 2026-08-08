@@ -11,7 +11,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-  ],
+  // Session refresh is only useful for authenticated server-rendered routes.
+  // Public and prerendered pages must stay on Cloudflare's static asset path.
+  matcher: ["/dashboard/:path*", "/student/:path*", "/admin/:path*"],
 };

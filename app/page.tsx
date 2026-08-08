@@ -13,21 +13,13 @@ import {
   Sparkles,
   UsersRound,
 } from "lucide-react";
-import { redirect } from "next/navigation";
 import { Logo } from "@/components/logo";
-import { getCurrentProfile } from "@/lib/auth";
-import { isSupabaseConfigured } from "@/lib/env";
 
-// This route reads the request's Supabase session when auth is configured.
-// Keep it request-rendered even if a build runs before runtime bindings exist.
-export const dynamic = "force-dynamic";
+// The landing page is identical for every visitor. Prerendering it lets
+// Cloudflare Static Assets serve it without starting the Next.js Worker.
+export const dynamic = "force-static";
 
-export default async function Home() {
-  if (isSupabaseConfigured()) {
-    const profile = await getCurrentProfile();
-    if (profile) redirect("/dashboard");
-  }
-
+export default function Home() {
   return (
     <div className="marketing-page">
       <header className="marketing-nav page-container">

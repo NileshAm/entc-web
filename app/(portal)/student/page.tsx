@@ -5,7 +5,7 @@ import { CompanyCard } from "@/components/company-card";
 import { StatusBadge } from "@/components/status-badge";
 import { availablePoints, formatDateTime } from "@/lib/business";
 import { requireProfile } from "@/lib/auth";
-import { getStudentData } from "@/lib/data";
+import { getStudentOverviewData } from "@/lib/data";
 
 export default async function StudentPage({
   searchParams,
@@ -14,8 +14,8 @@ export default async function StudentPage({
 }) {
   const query = await searchParams;
   const showForcedWithdrawal = query.forcedWithdrawal === "1";
-  const current = await requireProfile(["student"]);
-  const { profile, companies, applications, notifications } = await getStudentData(current.id);
+  const profile = await requireProfile(["student"]);
+  const { companies, applications, notifications } = await getStudentOverviewData(profile.id);
   const available = availablePoints(profile);
   const liveCompany = companies.find((company) => ["open", "bid_increase_pending"].includes(company.status));
   const activeApplications = applications.filter((application) => ["active_bid", "confirmed", "confirmation_required"].includes(application.status));

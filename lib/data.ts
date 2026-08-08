@@ -32,30 +32,23 @@ function normalizeCompany(row: Record<string, unknown>): Company {
   };
 }
 
-export async function getStudentData(studentId: string) {
-  const supabase = await createClient();
-  const [profileResult, companiesResult, applicationsResult, transactionsResult, notificationsResult] =
-    await Promise.all([
-      supabase.from("profiles").select("*").eq("id", studentId).single(),
-      supabase.from("companies").select("*").order("status").order("opens_at"),
-      supabase
-        .from("applications")
-        .select("*, company:companies(id,name,slug,logo_url,industry)")
-        .eq("student_id", studentId)
-        .order("applied_at", { ascending: false }),
-      supabase
-        .from("point_transactions")
-        .select("*, company:companies(name)")
-        .eq("student_id", studentId)
-        .order("created_at", { ascending: false })
-        .limit(50),
-      supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", studentId)
-        .order("created_at", { ascending: false })
-        .limit(20),
-    ]);
+type ServerSupabaseClient = Awaited<ReturnType<typeof createClient>>;
+
+async function loadStudentCompanyData(
+  supabase: ServerSupabaseClient,
+  studentId: string,
+) {
+  const [companiesResult, applicationsResult] = await Promise.all([
+    supabase.from("companies").select("*").order("status").order("opens_at"),
+    supabase
+      .from("applications")
+      .select("*, company:companies(id,name,slug,logo_url,industry)")
+      .eq("student_id", studentId)
+      .order("applied_at", { ascending: false }),
+  ]);
+
+  if (companiesResult.error) throw new Error(companiesResult.error.message);
+  if (applicationsResult.error) throw new Error(applicationsResult.error.message);
 
   const applications = (applicationsResult.data ?? []) as unknown as Application[];
   const applicationByCompany = new Map(applications.map((application) => [application.company_id, application]));
@@ -79,13 +72,57 @@ export async function getStudentData(studentId: string) {
     ...(company.id === liveCompany?.id ? { participants } : {}),
   }));
 
+  return { companies, applications };
+}
+
+export async function getStudentOverviewData(studentId: string) {
+  const supabase = await createClient();
+  const [companyData, notificationsResult] = await Promise.all([
+    loadStudentCompanyData(supabase, studentId),
+    supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", studentId)
+      .order("created_at", { ascending: false })
+      .limit(20),
+  ]);
+
+  if (notificationsResult.error) throw new Error(notificationsResult.error.message);
+
   return {
-    profile: profileResult.data as Profile,
-    companies,
-    applications,
-    transactions: (transactionsResult.data ?? []) as unknown as PointTransaction[],
+    ...companyData,
     notifications: (notificationsResult.data ?? []) as Notification[],
   };
+}
+
+export async function getStudentActivityData(studentId: string) {
+  const supabase = await createClient();
+  const [applicationsResult, transactionsResult] = await Promise.all([
+    supabase
+      .from("applications")
+      .select("*, company:companies(id,name,slug,logo_url,industry)")
+      .eq("student_id", studentId)
+      .order("applied_at", { ascending: false }),
+    supabase
+      .from("point_transactions")
+      .select("*, company:companies(name)")
+      .eq("student_id", studentId)
+      .order("created_at", { ascending: false })
+      .limit(50),
+  ]);
+
+  if (applicationsResult.error) throw new Error(applicationsResult.error.message);
+  if (transactionsResult.error) throw new Error(transactionsResult.error.message);
+
+  return {
+    applications: (applicationsResult.data ?? []) as unknown as Application[],
+    transactions: (transactionsResult.data ?? []) as unknown as PointTransaction[],
+  };
+}
+
+export async function getStudentCompaniesData(studentId: string) {
+  const supabase = await createClient();
+  return loadStudentCompanyData(supabase, studentId);
 }
 
 export async function getCompanyBySlug(slug: string, studentId: string) {
@@ -116,37 +153,60 @@ export async function getCompanyBySlug(slug: string, studentId: string) {
   };
 }
 
-export async function getAdminData() {
+export async function getAdminOverviewData() {
   const supabase = await createClient();
-  const [companiesResult, applicationsResult, studentsResult, transactionsResult, auditResult] =
-    await Promise.all([
-      supabase.from("companies").select("*").order("updated_at", { ascending: false }),
-      supabase
-        .from("applications")
-        .select(
-          "*, company:companies(id,name,slug,logo_url,industry), profile:profiles(id,full_name,registration_number,email)",
-        )
-        .order("updated_at", { ascending: false }),
-      supabase
-        .from("profiles")
-        .select("*")
-        .eq("role", "student")
-        .order("full_name"),
-      supabase.from("point_transactions").select("*").order("created_at", { ascending: false }),
-      supabase
-        .from("audit_logs")
-        .select("*, actor:profiles!audit_logs_actor_id_fkey(full_name,email)")
-        .order("created_at", { ascending: false })
-        .limit(100),
-    ]);
+  const [companiesResult, applicationsResult] = await Promise.all([
+    supabase.from("companies").select("*").order("updated_at", { ascending: false }),
+    supabase
+      .from("applications")
+      .select(
+        "*, company:companies(id,name,slug,logo_url,industry), profile:profiles(id,full_name,registration_number,email)",
+      )
+      .order("updated_at", { ascending: false }),
+  ]);
+
+  if (companiesResult.error) throw new Error(companiesResult.error.message);
+  if (applicationsResult.error) throw new Error(applicationsResult.error.message);
 
   return {
     companies: (companiesResult.data ?? []).map(normalizeCompany),
     applications: (applicationsResult.data ?? []) as unknown as Application[],
-    students: (studentsResult.data ?? []) as Profile[],
-    transactions: (transactionsResult.data ?? []) as PointTransaction[],
-    auditLogs: (auditResult.data ?? []) as unknown as AuditLog[],
   };
+}
+
+export async function getAdminCompanies() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("companies")
+    .select("*")
+    .order("updated_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(normalizeCompany);
+}
+
+export async function getAdminStudents() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("role", "student")
+    .order("full_name");
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Profile[];
+}
+
+export async function getAdminAuditLogs() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("audit_logs")
+    .select("*, actor:profiles!audit_logs_actor_id_fkey(full_name,email)")
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as AuditLog[];
 }
 
 export async function getCompanyForAdminEdit(companyId: string) {

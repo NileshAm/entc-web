@@ -1,10 +1,14 @@
 import "server-only";
 
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, UserRole } from "@/lib/types";
 
-export async function getCurrentProfile(): Promise<Profile | null> {
+// Layouts and pages frequently ask for the same profile during one render.
+// React cache keeps that to one JWT verification and one profile query per
+// request without sharing session data between Worker requests.
+export const getCurrentProfile = cache(async (): Promise<Profile | null> => {
   try {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.getClaims();
@@ -27,6 +31,11 @@ export async function getCurrentProfile(): Promise<Profile | null> {
 
     return (profile as Profile | null) ?? null;
   } catch (error) {
+    // cookies() uses framework exceptions to opt authenticated routes out of
+    // static generation. Let Next.js handle those instead of reporting them
+    // as Supabase failures during `next build`.
+    unstable_rethrow(error);
+
     // Auth/session failures are expected at this boundary (for example, a
     // stale refresh token). Fail closed without exposing tokens or PII.
     console.error("auth.profile_lookup_failed", {
@@ -34,7 +43,7 @@ export async function getCurrentProfile(): Promise<Profile | null> {
     });
     return null;
   }
-}
+});
 
 export async function requireProfile(allowedRoles?: UserRole[]) {
   const profile = await getCurrentProfile();

@@ -17,7 +17,7 @@ import { ManualRoundTimer } from "@/components/manual-round-timer";
 import { StatusBadge } from "@/components/status-badge";
 import { requireProfile } from "@/lib/auth";
 import { demandCategory, formatDateTime, formatStatus, initials } from "@/lib/business";
-import { getAdminData } from "@/lib/data";
+import { getAdminOverviewData } from "@/lib/data";
 
 export default async function AdminPage({
   searchParams,
@@ -27,7 +27,7 @@ export default async function AdminPage({
   const query = await searchParams;
   const resultCompanyId = typeof query.results === "string" ? query.results : null;
   const profile = await requireProfile(["admin", "viewer"]);
-  const { companies, applications } = await getAdminData();
+  const { companies, applications } = await getAdminOverviewData();
   const live = companies.find((company) =>
     ["open", "paused", "bid_increase_pending"].includes(company.status),
   );
