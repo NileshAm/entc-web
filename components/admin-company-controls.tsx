@@ -173,7 +173,8 @@ export function AdminCompanyControls({
       return (
         <>
           <div className="compact-controls">
-            {company.status === "upcoming" && <button disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "open"))}><CirclePlay /> Open</button>}
+            {company.status === "upcoming" && <button disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "registration_open"))}><CirclePlay /> Open registration</button>}
+            {company.status === "registration_open" && <button disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "open"))}><Gavel /> Start bidding</button>}
             {company.status === "open" && <button disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "paused"))}><CirclePause /> Pause</button>}
             {company.status === "paused" && <button disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "open"))}><CirclePlay /> Resume</button>}
             {["open", "paused"].includes(company.status) && <button disabled={pending} onClick={() => setDialog("autoFinalize")}><LockKeyhole /> Close now</button>}
@@ -187,7 +188,8 @@ export function AdminCompanyControls({
     return (
       <>
         <div className="compact-controls">
-          {company.status === "upcoming" && <button disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "open"))}><CirclePlay /> Open</button>}
+          {company.status === "upcoming" && <button disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "registration_open"))}><CirclePlay /> Open registration</button>}
+          {company.status === "registration_open" && <button disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "open"))}><Gavel /> Start bidding</button>}
           {company.status === "open" && <button disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "paused"))}><CirclePause /> Pause</button>}
           {company.status === "paused" && <button disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "open"))}><CirclePlay /> Resume</button>}
           {canIncrease && <button disabled={pending} onClick={openIncreaseDialog}><Gavel /> Increase bid</button>}
@@ -204,7 +206,8 @@ export function AdminCompanyControls({
   return (
     <>
       <div className="admin-control-row">
-        {company.status === "upcoming" && <button className="button button-primary" disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "open"))}><CirclePlay size={17} /> Open {company.bidding_mode === "automatic" ? "automatic auction" : "bidding"}</button>}
+        {company.status === "upcoming" && <button className="button button-primary" disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "registration_open"))}><CirclePlay size={17} /> Open registration</button>}
+        {company.status === "registration_open" && <button className="button button-warning" disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "open"))}><Gavel size={17} /> Start {company.bidding_mode === "automatic" ? "automatic bidding" : "committee bidding"} & lock cohort</button>}
         {company.bidding_mode === "automatic" && company.status === "open" && (
           <>
             <button className="button button-ghost" disabled={pending} onClick={() => run(() => changeCompanyStatus(company.id, "paused"))}><CirclePause size={17} /> Pause timer</button>

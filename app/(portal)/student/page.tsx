@@ -4,6 +4,7 @@ import { markNotificationRead } from "@/app/actions";
 import { CompanyCard } from "@/components/company-card";
 import { StatusBadge } from "@/components/status-badge";
 import { availablePoints, formatDateTime } from "@/lib/business";
+import { isUpcomingCompany } from "@/lib/bidding";
 import { requireProfile } from "@/lib/auth";
 import { getStudentOverviewData } from "@/lib/data";
 
@@ -18,6 +19,7 @@ export default async function StudentPage({
   const { companies, applications, notifications } = await getStudentOverviewData(profile.id);
   const available = availablePoints(profile);
   const liveCompany = companies.find((company) => ["open", "bid_increase_pending"].includes(company.status));
+  const upcomingCompanies = companies.filter((company) => isUpcomingCompany(company.status));
   const activeApplications = applications.filter((application) => ["active_bid", "confirmed", "confirmation_required"].includes(application.status));
   const unread = notifications.filter((notification) => !notification.read_at);
 
@@ -47,7 +49,16 @@ export default async function StudentPage({
           <CompanyCard company={liveCompany} availablePoints={available} featured />
         </section>
       ) : (
-        <section className="no-live-banner"><Gavel /><div><strong>No company is live right now</strong><span>Check the upcoming catalogue while the committee prepares the next session.</span></div><Link href="/student/companies">View upcoming <ArrowRight size={16} /></Link></section>
+        <section className="no-live-banner"><Gavel /><div><strong>No company is live right now</strong><span>Check the catalogue for companies that are open for pre-bidding registration.</span></div><Link href="/student/companies">Browse companies <ArrowRight size={16} /></Link></section>
+      )}
+
+      {upcomingCompanies.length > 0 && (
+        <section className="dashboard-section">
+          <div className="section-title-row"><div><span className="page-kicker">UPCOMING COMPANIES</span><h2>Register and place your opening bid</h2></div><Link href="/student/companies">View all companies <ArrowRight size={15} /></Link></div>
+          <div className="company-grid">
+            {upcomingCompanies.map((company) => <CompanyCard key={company.id} company={company} availablePoints={available} />)}
+          </div>
+        </section>
       )}
 
       <div className="dashboard-columns">

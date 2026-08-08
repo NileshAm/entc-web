@@ -29,6 +29,7 @@ const publicAnalyticsRowSchema = z.object({
   closes_at: z.string().nullable(),
   status: z.enum([
     "upcoming",
+    "registration_open",
     "open",
     "paused",
     "bid_increase_pending",

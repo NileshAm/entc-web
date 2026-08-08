@@ -99,7 +99,7 @@ export async function applyToCompany(companyId: string) {
     "student",
     "apply_to_company",
     { p_company_id: companyId },
-    "Application submitted. The current bid is now reserved.",
+    "You joined the company and reserved its opening bid. Withdrawal is free until bidding starts.",
   );
 }
 
@@ -116,11 +116,53 @@ export async function submitAutomaticBid(companyId: string, bid: number) {
 }
 
 export async function withdrawApplication(applicationId: string) {
+  try {
+    await requireProfile(["student"]);
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("withdraw_application", {
+      p_application_id: applicationId,
+    });
+    if (error) throw new Error(error.message);
+
+    revalidatePath("/student", "layout");
+    revalidatePath("/admin", "layout");
+    revalidatePath("/analytics");
+
+    const withdrawal = (Array.isArray(data) ? data[0] : data) as {
+      bid_response_penalty_percent?: number | null;
+      withdrawal_charge?: number;
+    } | null;
+    const withdrawalCharge = Number(withdrawal?.withdrawal_charge ?? 0);
+    const wasPreBidding = withdrawal?.bid_response_penalty_percent === null;
+
+    return wasPreBidding
+      ? {
+          ok: true,
+          message: "Application withdrawn before bidding started. All reserved points were released with no deduction.",
+        }
+      : withdrawalCharge > 0
+      ? {
+          ok: true,
+          message: `Application withdrawn. ${withdrawalCharge} points were deducted under the active-bidding withdrawal rule.`,
+        }
+      : {
+          ok: true,
+          message: "Application withdrawn during active bidding. No points were deducted because the calculated charge was zero.",
+        };
+  } catch (error) {
+    return resultFromError(error);
+  }
+}
+
+export async function placeAutomaticRegistrationBid(companyId: string, bid: number) {
+  if (!Number.isInteger(bid) || bid < 0) {
+    return { ok: false, message: "Enter a valid whole-number bid." };
+  }
   return rpcAction(
     "student",
-    "withdraw_application",
-    { p_application_id: applicationId },
-    "Application withdrawn. The applicable base-bid and increase withdrawal charge was applied.",
+    "submit_automatic_bid",
+    { p_company_id: companyId, p_bid: bid },
+    "Your registration bid is reserved. You can update it or withdraw for free until bidding starts.",
   );
 }
 

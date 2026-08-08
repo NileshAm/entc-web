@@ -1,10 +1,59 @@
-import type { ApplicationStatus } from "@/lib/types";
+import type { ApplicationStatus, CompanyStatus } from "@/lib/types";
+
+const activeApplicationStatuses: ApplicationStatus[] = [
+  "active_bid",
+  "confirmed",
+  "confirmation_required",
+];
+
+const inactiveApplicationStatuses: ApplicationStatus[] = [
+  "withdrawn",
+  "cancelled",
+  "not_selected",
+];
+
+export function isUpcomingCompany(companyStatus: CompanyStatus) {
+  return ["upcoming", "registration_open"].includes(companyStatus);
+}
+
+export function canJoinCompany(
+  companyStatus: CompanyStatus,
+  applicationStatus: ApplicationStatus | undefined,
+) {
+  return companyStatus === "registration_open"
+    && (applicationStatus === undefined
+      || inactiveApplicationStatuses.includes(applicationStatus));
+}
+
+export function canSubmitAutomaticBid(
+  companyStatus: CompanyStatus,
+  applicationStatus: ApplicationStatus | undefined,
+) {
+  return companyStatus === "open"
+    && applicationStatus !== undefined
+    && ["active_bid", "confirmed"].includes(applicationStatus);
+}
+
+export function canPlaceAutomaticRegistrationBid(
+  companyStatus: CompanyStatus,
+  applicationStatus: ApplicationStatus | undefined,
+) {
+  return companyStatus === "registration_open"
+    && (applicationStatus === undefined
+      || [
+        "active_bid",
+        "confirmed",
+        ...inactiveApplicationStatuses,
+      ].includes(applicationStatus));
+}
 
 export function withdrawalPenaltyApplies(
   applicationStatus: ApplicationStatus | undefined,
+  companyStatus: CompanyStatus,
 ) {
-  return applicationStatus !== undefined
-    && ["active_bid", "confirmed", "confirmation_required"].includes(applicationStatus);
+  return companyStatus !== "registration_open"
+    && applicationStatus !== undefined
+    && activeApplicationStatuses.includes(applicationStatus);
 }
 
 export function calculateIncreaseWithdrawalCharge({

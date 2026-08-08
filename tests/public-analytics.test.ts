@@ -2,6 +2,29 @@ import { describe, expect, it } from "vitest";
 import { normalizePublicCompanyAnalytics } from "../lib/public-analytics";
 
 describe("public analytics DTO", () => {
+  it("accepts the pre-bidding registration status", () => {
+    const company = normalizePublicCompanyAnalytics({
+      id: "6e519ae4-208d-4413-87c5-62be7f73eaf7",
+      name: "Registration Company",
+      industry: "Software",
+      location: "Colombo",
+      available_roles: [],
+      cv_requirement: 5,
+      current_bid: 10,
+      maximum_bid: null,
+      opens_at: null,
+      closes_at: null,
+      status: "registration_open",
+      applicant_count: 2,
+      bidding_mode: "committee",
+      inactivity_timeout_seconds: 120,
+      auto_closes_at: null,
+      participants: [],
+    });
+
+    expect(company.status).toBe("registration_open");
+  });
+
   it("keeps only public company statistics", () => {
     const company = normalizePublicCompanyAnalytics({
       id: "6e519ae4-208d-4413-87c5-62be7f73eaf7",

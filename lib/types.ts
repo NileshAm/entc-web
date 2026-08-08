@@ -3,6 +3,7 @@ export type BiddingMode = "committee" | "automatic";
 
 export type CompanyStatus =
   | "upcoming"
+  | "registration_open"
   | "open"
   | "paused"
   | "bid_increase_pending"

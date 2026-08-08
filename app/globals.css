@@ -384,6 +384,7 @@ input:focus, textarea:focus, select:focus { border-color: #8ca570 !important; bo
 .status-badge { width: max-content; display: inline-flex; align-items: center; gap: 6px; padding: 6px 9px; border-radius: 100px; color: #5e6964; background: #edf0ed; font-size: 10px; font-weight: 820; letter-spacing: .5px; text-transform: uppercase; white-space: nowrap; }
 .status-badge svg { width: 9px; }
 .status-open, .status-active_bid, .status-confirmed, .status-finalized, .status-active, .status-selected { color: var(--success); background: var(--success-soft); }
+.status-registration_open { color: #3565a8; background: #eaf2ff; }
 .status-bid_increase_pending, .status-confirmation_required, .status-paused { color: var(--warning); background: var(--warning-soft); }
 .status-cancelled, .status-withdrawn, .status-disabled, .status-not_selected { color: var(--danger); background: var(--danger-soft); }
 .company-meta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 17px; color: #68736d; font-size: 12px; }
@@ -413,6 +414,7 @@ input:focus, textarea:focus, select:focus { border-color: #8ca570 !important; bo
 .cutoff-alert small { font-size: 11px; line-height: 1.5; }
 .cutoff-alert.safe { border-color: #b8d9a8; background: #edf7e8; color: #416b31; }
 .cutoff-alert.danger { border-color: #efb7b9; background: #fff0f0; color: #a12e34; }
+.cutoff-alert.locked { border-color: #b9cce8; background: #eff5ff; color: #365f96; }
 .target-warning { display: flex; align-items: flex-start; gap: 7px; margin: 11px 0 4px; padding: 11px 12px; border: 1px solid #e5d69d; border-radius: 9px; color: #715d12 !important; background: #fff9df; font-size: 12px !important; }
 .target-warning svg { flex: 0 0 auto; margin-top: 1px; }
 .application-inline-status { margin-top: 14px; padding: 11px 12px; border: 1px solid #d3e2cc; border-radius: 9px; background: #eef5e9; color: #506a43; font-size: 12px; display: flex; align-items: center; gap: 9px; }

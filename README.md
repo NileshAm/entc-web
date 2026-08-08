@@ -8,7 +8,7 @@ InternBid is a mobile-friendly internship company bidding and CV allocation syst
 
 - Supabase email/password authentication with SSR cookies.
 - Student, administrator, and read-only committee roles.
-- Responsive student portal with point balances, committee-round Stay or Withdraw responses, student-set automatic bids, live rankings, participant names, private notifications, and a point ledger.
+- Responsive student portal with pre-bidding registration, point balances, committee-round Stay or Withdraw responses, student-set automatic bids, live rankings, participant names, private notifications, and a point ledger.
 - Administrator control room where the committee chooses a bidding method per company, controls committee bid increases, monitors automatic auctions, closes/finalizes sessions, manages companies and student points, exports data, and reviews the audit log.
 - Admin-only company editing and transactional CSV creation with audited changes to catalogue details, bid rules, and schedules.
 - A public `/analytics` page with realtime current bids, aggregate demand, and current applicant names with their bidding status. Emails, student indexes, points, and administrative data remain private.
@@ -19,7 +19,7 @@ InternBid is a mobile-friendly internship company bidding and CV allocation syst
 ## 1. Create the Supabase project
 
 1. Create a project in Supabase.
-2. Open the SQL editor and run the files in `supabase/migrations` in filename order, or link the Supabase CLI and run `supabase db push`. Existing installations must apply every migration newer than the latest entry in their migration history, through `202608060016_uom_student_identity_constraints.sql`.
+2. Open the SQL editor and run the files in `supabase/migrations` in filename order, or link the Supabase CLI and run `supabase db push`. Existing installations must apply every migration newer than the latest entry in their migration history, through `202608080004_editable_automatic_registration_bids.sql`.
 3. If Google sign-in is enabled, open **Authentication → URL Configuration** and add:
    - `http://localhost:3000/auth/callback`
    - `https://your-production-domain/auth/callback`
@@ -89,14 +89,16 @@ npm run build
 
 ## 4. Per-company bidding methods
 
-The committee selects the method while a company is still **Upcoming**. It is locked once bidding starts so an in-progress session cannot switch rule sets.
+The committee selects the method while a company is still **Upcoming**. It is locked once registration opens so every student in that cohort enters under the same rules.
+
+Every company follows `Upcoming → Registration Open → Open`. During **Registration Open**, committee-mode students reserve the committee opening bid while automatic-mode students choose and reserve their own initial bid. They can withdraw and recover the full reservation without a charge. Starting bidding freezes that cohort: no new or previously withdrawn student can enter the active session, and normal mode-specific withdrawal charges apply from that point onward.
 
 ### Committee-controlled bidding
 
-- Students apply at the company’s current bid and reserve that amount.
+- Students join during pre-bidding registration at the opening bid and reserve that amount.
 - When a company is oversubscribed, an administrator enters the increment for that round on the fly. The configured increment only prefills the control, and the new current bid is previewed immediately.
 - Every participating student receives a private notification and must choose **Stay** or **Withdraw** before the response deadline.
-- Staying reserves the additional points. Any manual self-withdrawal permanently charges the initial/base bid plus `ceil((current bid − initial bid) × withdrawal percentage)` and releases the previous reservation.
+- Staying reserves the additional points. A manual self-withdrawal after bidding starts permanently charges the initial/base bid plus `ceil((current bid − initial bid) × withdrawal percentage)` and releases the previous reservation. Registration-phase withdrawals are free.
 - The percentage is configured per company and defaults to 10%. A charge is capped at the student’s usable points so the balance never becomes negative.
 - Authenticated students can see the names and response states of students currently in the session, plus applicant and available-slot counts. Emails, registration numbers, point balances, and administrator data are not exposed.
 
@@ -108,10 +110,10 @@ select public.process_expired_bid_responses();
 
 ### Automatic ranked bidding
 
-- Students enter their own whole-number bid and may only increase it while the auction is open. The bid cannot exceed their usable points or the company maximum.
+- Students choose and reserve their initial whole-number bid during registration. They can update it in either direction or withdraw entirely for free until the auction opens; reservation differences are released or reserved immediately. Once the auction opens, only that registered cohort may increase its bids. A bid cannot exceed the student’s usable points or the company maximum.
 - Each bid reserves the additional points atomically and restarts the company inactivity timer.
 - When the timer expires, the top bids up to the CV-slot target are selected. Equal bids favor the earlier submission. Winners spend their individual bid; all other reservations are released.
-- A student who withdraws pays their first bid plus `ceil((latest bid − first bid) × withdrawal percentage)`, capped at their usable balance.
+- A student who withdraws after the auction starts pays their first bid plus `ceil((latest bid − first bid) × withdrawal percentage)`, capped at their usable balance. Leaving during registration releases the full reservation for free.
 - The inactivity window is configured per company from 30 seconds to 24 hours and defaults to 120 seconds. Administrators can pause, resume, or close an auction immediately.
 - The migration installs a `pg_cron` sweep every 10 seconds when the extension is available. On hosted Supabase, ensure the Cron integration/extension is enabled; the close function is `public.close_inactive_automatic_bidding()`.
 
@@ -183,7 +185,7 @@ The unresolved committee decisions from the SRS use these conservative defaults:
 - One company can be live at a time.
 - Multiple applications are permitted only when the student has enough unreserved points.
 - Committee-mode points are spent at the committee-controlled current bid; automatic-mode winners spend their individual bids.
-- Normal committee withdrawal releases reserved points; committee increase withdrawals and automatic-mode withdrawals apply their configured charge.
+- Registration-phase withdrawal releases all reserved points for free. After bidding starts, committee and automatic withdrawals apply their configured base-bid-plus-increase charge.
 - Missed bid responses automatically use the same withdrawal-charge workflow when the expiry function is scheduled.
 - Students see participant names and response states, but not emails, indexes, balances, or other private profile data.
 - Notifications are portal-only.

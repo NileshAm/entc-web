@@ -269,7 +269,7 @@ export default async function PublicAnalyticsPage() {
                   {otherCompanies.map((company) => (
                     <article key={company.id} className="public-applicant-company">
                       <header>
-                        <span><strong>{company.name}</strong><small>{company.participants.length} recorded bidders · {company.cv_requirement} positions</small></span>
+                        <span><strong>{company.name}</strong><small>{company.participants.length} {company.status === "registration_open" ? "registered students" : "recorded bidders"} · {company.cv_requirement} positions</small></span>
                         <StatusBadge status={company.status} />
                       </header>
                       {company.participants.length ? (
@@ -279,7 +279,9 @@ export default async function PublicAnalyticsPage() {
                               <span className="participant-avatar" aria-hidden="true">{participant.full_name.charAt(0).toUpperCase()}</span>
                               <span>{participant.full_name}</span>
                               <small className={participantTone(participant)}>
-                                {participantRankingLabel(participant, company.bidding_mode, company.cv_requirement)}
+                                {company.status === "registration_open" && participant.response_state !== "withdrawn"
+                                  ? `${participant.bid_amount} pts reserved · ${company.bidding_mode === "automatic" ? "Initial bid" : "Registered"}`
+                                  : participantRankingLabel(participant, company.bidding_mode, company.cv_requirement)}
                               </small>
                             </li>
                           ))}

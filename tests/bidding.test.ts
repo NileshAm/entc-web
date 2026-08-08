@@ -1,25 +1,64 @@
 import { describe, expect, it } from "vitest";
 import {
+  canJoinCompany,
+  canPlaceAutomaticRegistrationBid,
+  canSubmitAutomaticBid,
   calculateIncreaseWithdrawalCharge,
+  isUpcomingCompany,
   withdrawalPenaltyApplies,
 } from "../lib/bidding";
 
+describe("pre-bidding registration", () => {
+  it("groups registration-open companies with upcoming companies", () => {
+    expect(isUpcomingCompany("upcoming")).toBe(true);
+    expect(isUpcomingCompany("registration_open")).toBe(true);
+    expect(isUpcomingCompany("open")).toBe(false);
+  });
+
+  it("allows new and previously withdrawn students to join only during registration", () => {
+    expect(canJoinCompany("registration_open", undefined)).toBe(true);
+    expect(canJoinCompany("registration_open", "withdrawn")).toBe(true);
+    expect(canJoinCompany("open", undefined)).toBe(false);
+    expect(canJoinCompany("registration_open", "active_bid")).toBe(false);
+  });
+
+  it("locks automatic bidding to the registered active cohort", () => {
+    expect(canSubmitAutomaticBid("open", "active_bid")).toBe(true);
+    expect(canSubmitAutomaticBid("open", "confirmed")).toBe(true);
+    expect(canSubmitAutomaticBid("open", undefined)).toBe(false);
+    expect(canSubmitAutomaticBid("open", "withdrawn")).toBe(false);
+    expect(canSubmitAutomaticBid("registration_open", "active_bid")).toBe(false);
+  });
+
+  it("allows an initial automatic bid during registration", () => {
+    expect(canPlaceAutomaticRegistrationBid("registration_open", undefined)).toBe(true);
+    expect(canPlaceAutomaticRegistrationBid("registration_open", "withdrawn")).toBe(true);
+    expect(canPlaceAutomaticRegistrationBid("registration_open", "active_bid")).toBe(true);
+    expect(canPlaceAutomaticRegistrationBid("registration_open", "confirmed")).toBe(true);
+    expect(canPlaceAutomaticRegistrationBid("open", undefined)).toBe(false);
+  });
+});
+
 describe("withdrawal penalty applicability", () => {
+  it("does not charge a withdrawal before bidding starts", () => {
+    expect(withdrawalPenaltyApplies("active_bid", "registration_open")).toBe(false);
+  });
+
   it("charges a self-withdrawal while a manual decision is pending", () => {
-    expect(withdrawalPenaltyApplies("confirmation_required")).toBe(true);
+    expect(withdrawalPenaltyApplies("confirmation_required", "bid_increase_pending")).toBe(true);
   });
 
   it("charges an active or confirmed manual self-withdrawal", () => {
-    expect(withdrawalPenaltyApplies("active_bid")).toBe(true);
-    expect(withdrawalPenaltyApplies("confirmed")).toBe(true);
+    expect(withdrawalPenaltyApplies("active_bid", "open")).toBe(true);
+    expect(withdrawalPenaltyApplies("confirmed", "paused")).toBe(true);
   });
 
   it("continues to charge automatic-bid withdrawals", () => {
-    expect(withdrawalPenaltyApplies("active_bid")).toBe(true);
+    expect(withdrawalPenaltyApplies("active_bid", "open")).toBe(true);
   });
 
   it("does not calculate a new penalty after withdrawal is complete", () => {
-    expect(withdrawalPenaltyApplies("withdrawn")).toBe(false);
+    expect(withdrawalPenaltyApplies("withdrawn", "open")).toBe(false);
   });
 });
 
